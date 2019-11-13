@@ -36,4 +36,4 @@ def load_receipts(config):
 
     conf.import_config(config)
     repos = conf.export('dict') or {}
-    return repos['receipts']
+    return repos

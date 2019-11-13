@@ -7,7 +7,7 @@ import subprocess
 import time
 import os
 import signal
-# import openupgrade_fixes
+import openupgrade_fixes
 import config
 import requirements
 
@@ -54,9 +54,9 @@ class Connection:
         self.venv_path = os.path.join(self.path, 'tmp_venv')
         self.pg_bin_path = '/usr/lib/postgresql/11/bin/' if self.db_port in [
             '5439', '5440', '5441'] else ''
-        self.receipts_migration = config.load_receipts('receipts.yml')
-        # self.fixes = openupgrade_fixes.Fixes(
-        #     self.db, self.user, self.password, self.db_port)
+        self.receipts = config.load_receipts('receipts.yml')
+        self.fixes = openupgrade_fixes.Fixes(
+            self.db, self.user, self.password, self.db_port)
 
     def odoo_connect(self):
         self.client = odooly.Client(
@@ -84,18 +84,19 @@ class Connection:
             load = 'base,web'
         executable = 'openerp-server' if version in ['7.0', '8.0'] else 'odoo'
         bash_command = "bin/%s " \
-                       "--db_port=%s --xmlrpc-port=%s --log-level=warn " \
+                       "--db_port=%s --xmlrpc-port=%s " \
                        "--logfile=%s/migration.log " \
                        "--addons-path=" \
                        "%s/odoo/addons,%s/addons-extra%s " \
-                       "--load=%s " \
-                       "--data-dir=%s/data_dir " % (
+                       "--load=%s " % (
                         executable, self.db_port, self.xmlrpc_port, venv_path,
                         venv_path, venv_path,
                         (',%s/odoo/odoo/addons' % venv_path if version not in [
                             '7.0', '8.0', '9.0'] else ''),
-                        load, venv_path)
+                        load)
         cwd_path = '%s/' % venv_path
+        if version != '7.0':
+            bash_command += "--data-dir=%s/data_dir " % venv_path
         if update:
             bash_command += " -u all -d %s --stop-after-init" % self.db
         process = subprocess.Popen(
@@ -166,7 +167,7 @@ class Connection:
     def restore_db(self, from_version):
         pg_bin_path = self.pg_bin_path
         process = subprocess.Popen(
-            ['%sdropdb -p %s %s' % (pg_bin_path, self.db_port, self.db)],
+            ['%sdropdb --if-exists -p %s %s' % (pg_bin_path, self.db_port, self.db)],
             shell=True)
         process.wait()
         process = subprocess.Popen(
@@ -188,51 +189,45 @@ class Connection:
         process.wait()
 
     ##### MASTER function #####
-    def do_migration(self, from_version, to_version, do_clean=False):
-        # STEP1: create venv for current version to fix it
-        self.create_venv_git_version(from_version, openupgrade=True)
-        self.restore_filestore(from_version, from_version)
-        self.restore_db(from_version)
-        self.disable_mail(disable=True)
+    def do_migration(self, from_version, to_version, do_clean=False, restore=False):
+        self.create_venv_git_version(to_version, openupgrade=True)
         if do_clean:
-            if from_version == '10.0':
-                self.uninstall_v11_modules()
+            # STEP1: create venv for current version to fix it
+            self.create_venv_git_version(from_version, openupgrade=True)
+            # self.restore_filestore(from_version, from_version)
+            self.restore_db(from_version)
+            self.disable_mail(disable=True)
             if from_version == '11.0':
                 self.uninstall_v11_modules_after()
+            self.uninstall_modules(from_version)
+            self.start_odoo(from_version, update=True, migrate=True)
+            self.delete_old_modules(from_version)
             if from_version == '8.0':
-                self.uninstall_modules()
-                self.start_odoo(from_version, update=True, migrate=True)
-                self.delete_old_modules()
                 self.start_odoo(from_version, update=True, migrate=True)
                 self.fixes.remove_views()
                 if self.db == 'odoo':
                     self.fixes.set_product_with_wrong_uom_not_saleable()
                     self.fixes.fix_uom_invoiced_from_sale()
                     self.fixes.fix_uom_invoiced_from_purchase()
-                self.delete_old_modules()
+                self.delete_old_modules(from_version)
             if from_version == '9.0':
                 self.fixes.remove_views()
-            self.dump_database(from_version)
-            self.dump_filestore(from_version)
-        # STEP2: create venv for upgrade, restoring db and filestore from
-        # fixed version created in STEP1
-        self.create_venv_git_version(to_version, openupgrade=True)
-        self.restore_filestore(from_version, to_version)
-        self.restore_db(from_version)
+        elif restore:
+            # if not restored before, restore db and filestore
+            self.restore_filestore(from_version, to_version)
+            self.restore_db(from_version)
         if self.db == 'odoo':
             self.fixes.update_analitic_sal()
-        if to_version == '10.0':
-            self.uninstall_v10_modules()
-            # todo fix ir.config_parameter sempre a 'http://127.0.0.1:8069'
         self.start_odoo(to_version, update=True, migrate=True)
+        self.uninstall_modules(to_version)
         if self.db == 'odoo':
             self.fixes.fix_delivered_hours_sale()
         if from_version == '8.0' and self.db == 'odoo':
             self.fixes.update_product_track_service()
-        self.dump_database(to_version)
-        self.dump_filestore(to_version)
-        requirements.create_pip_requirements(
-            self, to_version)
+        # self.dump_database(to_version)
+        # self.dump_filestore(to_version)
+        # requirements.create_pip_requirements(
+        #     self, to_version)
 
     def post_migration(self, version):
         # re-enable mail servers and clean db
@@ -276,12 +271,14 @@ class Connection:
 
         repos = config.load_config('repos.yml', version)
         for repo_name in repos:
-            repo = repos.get(repo_name)
+            repo_text = repos.get(repo_name)
+            repo = repo_text.split(' ')[0]
+            repo_version = repo_text.split(' ')[1]
             if not os.path.isdir('%s/repos/%s' % (venv_path, repo_name)):
                 process = subprocess.Popen([
                     'git clone %s --single-branch -b %s --depth=1 '
                     '%s/repos/%s'
-                    % (repo, version, venv_path, repo_name)
+                    % (repo, repo_version, venv_path, repo_name)
                 ], cwd=venv_path, shell=True)
                 process.wait()
             process = subprocess.Popen([
@@ -346,54 +343,45 @@ class Connection:
         res1 = wiz_id.purge_all()
         print(res1)
 
-    def uninstall_modules(self):
-        self.start_odoo('8.0')
+    def uninstall_modules(self, version):
+        self.start_odoo(version, update=False, migrate=True)
         module_obj = self.client.env['ir.module.module']
-        # remove unused for dale, check others
+        self.remove_modules()
+        self.remove_modules('upgrade')
+        # remove unused for odoo, check others
         # if self.db == 'odoo':
         #     self.client.uninstall('product_service_type')
         #     self.client.uninstall('partner_default_sale_discount')
         #     self.client.uninstall('discount_complex')
-        if module_obj.search(
-                [('name', '=', 'sale_order_report_aeroo'),
-                 ('state', '=', 'installed')]):
-            self.client.env.install('sale_order_report_qweb')
-        if module_obj.search(
-                [('name', '=', 'account_invoice_report_aeroo'),
-                 ('state', '=', 'installed')]):
-            self.client.env.install('account_invoice_report_qweb')
-        if module_obj.search(
-                [('name', '=', 'account_fiscal_year_closing'),
-                 ('state', '=', 'installed')]):
-            self.client.env.install('account_reversal')
-        if module_obj.search(
-                [('name', '=', 'account_vat_period_end_statement'),
-                 ('state', '=', 'installed')]):
-            self.client.env.install('account_vat_statement_tmp')
-        if module_obj.search(
-                [('name', '=', 'account_invoice_check_duplicate'),
-                 ('state', '=', 'installed')]):
-            self.client.env.install('account_invoice_supplier_ref_unique')
-        modules = [x.get('v8_to_uninstall_migration_to_10') +
-                   x.get('to_uninstall_waiting_migrate') for x
-                   in self.receipts_migration if
-                   x.get('v8_to_uninstall_migration_to_10')
-                   or x.get('to_uninstall_waiting_migrate')][0]
-        for module in modules:
-            self.uninstall_module(module)
+        receipt = self.receipts[version]
+        for modules in receipt:
+            module_list = modules.get('auto_install', False)
+            if module_list:
+                for module_pair in module_list:
+                    module_to_check = module_pair.split(' ')[0]
+                    module_to_install = module_pair.split(' ')[0]
+                    if module_obj.search([
+                            ('name', '=', module_to_check),
+                            ('state', '=', 'installed')]):
+                        self.client.env.install(module_to_install)
+            modules_to_uninstall = modules.get('uninstall', False)
+            if modules_to_uninstall:
+                for module in modules_to_uninstall:
+                    self.uninstall_module(module)
         self.stop_odoo()
 
-    def delete_old_modules(self):
-        self.start_odoo('8.0')
+    def delete_old_modules(self, version):
+        self.start_odoo(version, update=False, migrate=True)
         module_obj = self.client.env['ir.module.module']
-        modules = [x.get('v8_to_delete') for x in self.receipts_migration if
-                   x.get('v8_to_delete')][0]
-        for module in modules:
-            module = module_obj.search([
-                ('name', '=', module)
-            ])
-            if module:
-                module_obj.unlink(module.id)
+        receipt = self.receipts[version]
+        for modules in receipt:
+            module_list = modules.get('delete', False)
+            if module_list:
+                for module in module_list:
+                    module = module_obj.search([
+                        ('name', '=', module)])
+                    if module:
+                        module_obj.unlink(module.id)
         self.stop_odoo()
 
     def uninstall_v10_modules(self):
