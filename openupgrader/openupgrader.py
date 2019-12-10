@@ -7,7 +7,6 @@ import subprocess
 import time
 import os
 import signal
-import openupgrade_fixes
 import config
 import requirements
 
@@ -55,8 +54,6 @@ class Connection:
         self.pg_bin_path = '/usr/lib/postgresql/11/bin/' if self.db_port in [
             '5439', '5440', '5441'] else ''
         self.receipts = config.load_receipts('receipts.yml')
-        self.fixes = openupgrade_fixes.Fixes(
-            self.db, self.user, self.password, self.db_port)
 
     def odoo_connect(self):
         self.client = odooly.Client(
@@ -188,7 +185,7 @@ class Connection:
                 dump_file, pg_bin_path, self.db_port, self.db)], shell=True)
         process.wait()
 
-    ##### MASTER function #####
+    # MASTER function #####
     def do_migration(self, from_version, to_version, do_clean=False, restore=False):
         self.create_venv_git_version(to_version, openupgrade=True)
         if do_clean:
@@ -197,37 +194,39 @@ class Connection:
             # self.restore_filestore(from_version, from_version)
             self.restore_db(from_version)
             self.disable_mail(disable=True)
-            if from_version == '11.0':
-                self.uninstall_v11_modules_after()
             self.uninstall_modules(from_version)
+            # n.b. when update, at the end odoo service is stopped
             self.start_odoo(from_version, update=True, migrate=True)
+            # clean commands via sql
+            receipt = self.receipts[from_version]
+            for part in receipt:
+                bash_commands = part.get('sql_commands', [])
+                for bash_command in bash_commands:
+                    command = ['psql -p %s -d %s -c "%s"'
+                               % (self.db_port, self.db, bash_command)]
+                    process = subprocess.Popen(command, shell=True)
+                    process.wait()
             self.delete_old_modules(from_version)
-            if from_version == '8.0':
-                self.start_odoo(from_version, update=True, migrate=True)
-                self.fixes.remove_views()
-                if self.db == 'odoo':
-                    self.fixes.set_product_with_wrong_uom_not_saleable()
-                    self.fixes.fix_uom_invoiced_from_sale()
-                    self.fixes.fix_uom_invoiced_from_purchase()
-                self.delete_old_modules(from_version)
-            if from_version == '9.0':
-                self.fixes.remove_views()
+            # self.fixes.set_product_with_wrong_uom_not_saleable()
+            # self.fixes.fix_uom_invoiced_from_sale()
+            # self.fixes.fix_uom_invoiced_from_purchase()
+        # restore db and filestore if not restored before
         elif restore:
-            # if not restored before, restore db and filestore
             self.restore_filestore(from_version, to_version)
             self.restore_db(from_version)
-        if self.db == 'odoo':
-            self.fixes.update_analitic_sal()
+        # self.fixes.update_analitic_sal()
+        ### DO MIGRATION to next version ###
         self.start_odoo(to_version, update=True, migrate=True)
         self.uninstall_modules(to_version)
-        if self.db == 'odoo':
-            self.fixes.fix_delivered_hours_sale()
-        if from_version == '8.0' and self.db == 'odoo':
-            self.fixes.update_product_track_service()
+        # self.fixes.fix_delivered_hours_sale()
+        # if from_version == '8.0':
+        #     self.fixes.update_product_track_service()
         # self.dump_database(to_version)
         # self.dump_filestore(to_version)
-        # requirements.create_pip_requirements(
-        #     self, to_version)
+        if to_version in ['10.0', '11.0', '12.0']:
+            requirements.create_pip_requirements(self, to_version)
+        # self.fixes.fix_taxes()
+        #todo remove aeroo reports
 
     def post_migration(self, version):
         # re-enable mail servers and clean db
@@ -298,7 +297,6 @@ class Connection:
                         process.wait()
                 break
 
-    #### database cleanup ####
     def database_cleanup(self, to_version):
         self.start_odoo(to_version, update=False, migrate=True)
         self.remove_modules()
@@ -319,13 +317,13 @@ class Connection:
         wizard = self.client.env[model]
         purge_obj = self.client.env['cleanup.purge.line.module']
         try:
-            config = wizard.default_get(list(wizard.fields_get()))
+            configuration = wizard.default_get(list(wizard.fields_get()))
         except Exception:
             return
-        if not config:
+        if not configuration:
             return
         try:
-            wiz_id = wizard.create(config)
+            wiz_id = wizard.create(configuration)
         except Exception:
             return
         if model == 'cleanup.purge.wizard.column':
@@ -348,11 +346,6 @@ class Connection:
         module_obj = self.client.env['ir.module.module']
         self.remove_modules()
         self.remove_modules('upgrade')
-        # remove unused for odoo, check others
-        # if self.db == 'odoo':
-        #     self.client.uninstall('product_service_type')
-        #     self.client.uninstall('partner_default_sale_discount')
-        #     self.client.uninstall('discount_complex')
         receipt = self.receipts[version]
         for modules in receipt:
             module_list = modules.get('auto_install', False)
@@ -382,41 +375,6 @@ class Connection:
                         ('name', '=', module)])
                     if module:
                         module_obj.unlink(module.id)
-        self.stop_odoo()
-
-    def uninstall_v10_modules(self):
-        self.start_odoo('10.0', update=False, migrate=True)
-        self.remove_modules()
-        self.remove_modules('upgrade')
-        self.uninstall_module('account_vat_statement_tmp')
-        modules = [x.get('v10_to_uninstall_after_migration') for x in self.
-                   receipts_migration if x.get(
-                       'v10_to_uninstall_after_migration')][0]
-        for module in modules:
-            self.uninstall_module(module)
-        self.fixes.fix_taxes()
-        #todo remove aeroo reports
-        self.stop_odoo()
-
-    def uninstall_v11_modules(self):
-        self.start_odoo('10.0', update=False, migrate=True)
-        self.remove_modules()
-        self.remove_modules('upgrade')
-        modules = [x.get('to_uninstall_migration_11') for x in self.
-                   receipts_migration if x.get('to_uninstall_migration_11')][0]
-        for module in modules:
-            self.uninstall_module(module)
-        self.stop_odoo()
-
-    def uninstall_v11_modules_after(self):
-        self.start_odoo('11.0', update=False, migrate=True)
-        self.remove_modules()
-        self.remove_modules('upgrade')
-        modules = [x.get('uninstall_after_migration_11') for x in self.
-                   receipts_migration if x.get(
-                       'uninstall_after_migration_11')][0]
-        for module in modules:
-            self.uninstall_module(module)
         self.stop_odoo()
 
     def remove_modules(self, module_state=''):

@@ -29,6 +29,7 @@ class Fixes:
             'delete from ir_ui_view where inherit_id is not null;',
             'delete from ir_ui_view where inherit_id is not null;',
             'delete from ir_ui_view where inherit_id is not null;',
+            'delete from ir_ui_view where name = \'stock.journal.form\';',
             'delete from ir_ui_view where id in ('
                 'select ir_model_data.res_id from ir_model_data join '
                 'ir_module_module on ir_module_module.name = '
@@ -57,8 +58,8 @@ class Fixes:
                 ' \'Project: project manager: does not see all (modified)\';',
             'DROP VIEW IF EXISTS report_analytic_account_close;',
             'DROP VIEW IF EXISTS hr_expense_report;',
-            'DROP VIEW if exists report_timesheet_line;',
-            'DROP VIEW if exists hr_timesheet_report;',
+            'DROP VIEW IF EXISTS report_timesheet_line;',
+            'DROP VIEW IF EXISTS hr_timesheet_report;',
             'DROP VIEW IF EXISTS report_account_receivable;',
             'delete from hr_applicant_category;',
             'delete from ir_ui_view where model = \'account.payment.mode\';',
