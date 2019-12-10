@@ -14,61 +14,13 @@ class Fixes:
 
     # in migration to 10.0, some account.move.line created from account.invoice
     # missed tax_line_id
-    # elect name,date from account_move_line where tax_line_id is null and account_id
+    # select name,date from account_move_line where tax_line_id is null and account_id
     # = (id del conto iva a debito);
     # ma probabilmente era un errore della 8.0
     # fixme nella migrazione dalla 8.0 alla 10.0 non tutte le imposte acquisto vengono
     #  impostate con il campo conto liquidazione IVA! e l'iva indetraibile non viene
     #  ovviamente corretta con la nuova configurazione (padre-figlie)
     # todo fix ir.config_parameter sempre a 'http://127.0.0.1:8069'
-
-    def remove_views(self):
-        bash_commands = [
-            'delete from ir_ui_view where inherit_id is not null;',
-            'delete from ir_ui_view where inherit_id is not null;',
-            'delete from ir_ui_view where inherit_id is not null;',
-            'delete from ir_ui_view where inherit_id is not null;',
-            'delete from ir_ui_view where inherit_id is not null;',
-            'delete from ir_ui_view where name = \'stock.journal.form\';',
-            'delete from ir_ui_view where id in ('
-                'select ir_model_data.res_id from ir_model_data join '
-                'ir_module_module on ir_module_module.name = '
-                'ir_model_data.module where model=\'ir.ui.view\' '
-                'and state=\'uninstalled\');',
-            'delete from ir_ui_menu where id in ('
-                'select ir_model_data.res_id from ir_model_data join '
-                'ir_module_module on ir_module_module.name = '
-                'ir_model_data.module where model=\'ir.ui.menu\' '
-                'and state=\'uninstalled\');',
-            'delete from ir_ui_view where id in (475, 472, 735);',
-            'delete from ir_ui_view where id in (736, 476, 536, 963, 156);',
-            'delete from ir_ui_view where id in (1577, 1578, 1918, 2011);',
-            'delete from ir_ui_view where model = \'account.invoice\' '
-                'and name ilike \'%pro%\';',
-            # try to fix account_vat_period_end_statement upgrade, if don't
-            # work, remove and reinstall
-            'delete from ir_ui_view where model = \'res.company\' '
-                'and name ilike \'%view_company_form_rea%\';',
-            'delete from ir_ui_view where model = \'res.partner\' '
-                'and name ilike \'%view_rea_partner_form%\';',
-            'delete from ir_ui_view where model = \'res.company\' '
-                'and name ilike \'%view_vat_period_end_statement_company%\';',
-            'delete from decimal_precision where name = \'Stock Volume\';',
-            'update ir_rule set active = true where active = false and name !='
-                ' \'Project: project manager: does not see all (modified)\';',
-            'DROP VIEW IF EXISTS report_analytic_account_close;',
-            'DROP VIEW IF EXISTS hr_expense_report;',
-            'DROP VIEW IF EXISTS report_timesheet_line;',
-            'DROP VIEW IF EXISTS hr_timesheet_report;',
-            'DROP VIEW IF EXISTS report_account_receivable;',
-            'delete from hr_applicant_category;',
-            'delete from ir_ui_view where model = \'account.payment.mode\';',
-        ]
-        for bash_command in bash_commands:
-            command = ['psql -U sergio -p %s -d %s -c "%s"'
-                       % (self.db_port, self.db, bash_command)]
-            process = subprocess.Popen(command, shell=True)
-            process.wait()
 
     def set_product_with_wrong_uom_not_saleable(self):
         # giorni: 29 e 26 > not saleable
@@ -301,14 +253,6 @@ class Fixes:
         for invoice_line in invoice_lines:
             invoice_line.uos_id = 1
         self.stop_odoo()
-
-
-    def remove_aeroo_reports(self):
-        model_obj = self.client.env['ir.model.data']
-        reports = model_obj.search([
-            ('model', '=', 'ir.actions.report.xml')
-        ])
-        #todo get reports by report_type = 'aeroo'
 
     # todo dopo il ripristino del db e del filestore:
     #  ripristinare filtri disabilitati perche invalidi

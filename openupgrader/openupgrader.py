@@ -194,7 +194,6 @@ class Connection:
             # self.restore_filestore(from_version, from_version)
             self.restore_db(from_version)
             self.disable_mail(disable=True)
-            self.uninstall_modules(from_version)
             # n.b. when update, at the end odoo service is stopped
             self.start_odoo(from_version, update=True, migrate=True)
             # clean commands via sql
@@ -207,6 +206,7 @@ class Connection:
                     process = subprocess.Popen(command, shell=True)
                     process.wait()
             self.delete_old_modules(from_version)
+            self.uninstall_modules(from_version)
             # self.fixes.set_product_with_wrong_uom_not_saleable()
             # self.fixes.fix_uom_invoiced_from_sale()
             # self.fixes.fix_uom_invoiced_from_purchase()
@@ -364,18 +364,19 @@ class Connection:
         self.stop_odoo()
 
     def delete_old_modules(self, version):
-        self.start_odoo(version, update=False, migrate=True)
-        module_obj = self.client.env['ir.module.module']
         receipt = self.receipts[version]
-        for modules in receipt:
-            module_list = modules.get('delete', False)
-            if module_list:
-                for module in module_list:
-                    module = module_obj.search([
-                        ('name', '=', module)])
-                    if module:
-                        module_obj.unlink(module.id)
-        self.stop_odoo()
+        if [modules.get('delete', False) for modules in receipt]:
+            self.start_odoo(version, update=False, migrate=True)
+            module_obj = self.client.env['ir.module.module']
+            for modules in receipt:
+                module_list = modules.get('delete', False)
+                if module_list:
+                    for module in module_list:
+                        module = module_obj.search([
+                            ('name', '=', module)])
+                        if module:
+                            module_obj.unlink(module.id)
+            self.stop_odoo()
 
     def remove_modules(self, module_state=''):
         if module_state == 'upgrade':
