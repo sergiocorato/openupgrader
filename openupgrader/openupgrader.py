@@ -201,12 +201,18 @@ class Connection:
             for part in receipt:
                 bash_commands = part.get('sql_commands', [])
                 for bash_command in bash_commands:
-                    command = ['psql -p %s -d %s -c "%s"'
+                    command = ["psql -p %s -d %s -c \'%s\'"
                                % (self.db_port, self.db, bash_command)]
                     process = subprocess.Popen(command, shell=True)
                     process.wait()
+                bash_update_commands = part.get('sql_update_commands', [])
+                for bash_update_command in bash_update_commands:
+                    upd_command = ['psql -p %s -d %s -c "%s"'
+                                   % (self.db_port, self.db, bash_update_command)]
+                    process = subprocess.Popen(upd_command, shell=True)
+                    process.wait()
             self.delete_old_modules(from_version)
-            self.uninstall_modules(from_version)
+            self.uninstall_modules(from_version, before_migration=True)
             # self.fixes.set_product_with_wrong_uom_not_saleable()
             # self.fixes.fix_uom_invoiced_from_sale()
             # self.fixes.fix_uom_invoiced_from_purchase()
@@ -217,7 +223,7 @@ class Connection:
         # self.fixes.update_analitic_sal()
         ### DO MIGRATION to next version ###
         self.start_odoo(to_version, update=True, migrate=True)
-        self.uninstall_modules(to_version)
+        self.uninstall_modules(to_version, after_migration=True)
         # self.fixes.fix_delivered_hours_sale()
         # if from_version == '8.0':
         #     self.fixes.update_product_track_service()
@@ -341,7 +347,7 @@ class Connection:
         res1 = wiz_id.purge_all()
         print(res1)
 
-    def uninstall_modules(self, version):
+    def uninstall_modules(self, version, before_migration=False, after_migration=False):
         self.start_odoo(version, update=False, migrate=True)
         module_obj = self.client.env['ir.module.module']
         self.remove_modules()
@@ -357,10 +363,16 @@ class Connection:
                             ('name', '=', module_to_check),
                             ('state', '=', 'installed')]):
                         self.client.env.install(module_to_install)
-            modules_to_uninstall = modules.get('uninstall', False)
-            if modules_to_uninstall:
-                for module in modules_to_uninstall:
-                    self.uninstall_module(module)
+            if after_migration:
+                modules_to_uninstall = modules.get('uninstall_after_migration', False)
+                if modules_to_uninstall:
+                    for module in modules_to_uninstall:
+                        self.install_uninstall_module(module, install=False)
+            if before_migration:
+                modules_to_uninstall = modules.get('uninstall_before_migration', False)
+                if modules_to_uninstall:
+                    for module in modules_to_uninstall:
+                        self.install_uninstall_module(module, install=False)
         self.stop_odoo()
 
     def delete_old_modules(self, version):
@@ -398,7 +410,7 @@ class Connection:
         print('Modules: %s' % msg_modules)
         print('Modules after: %s' % msg_modules_after)
 
-    def uninstall_module(self, module):
+    def install_uninstall_module(self, module, install=True):
         module_obj = self.client.env['ir.module.module']
         to_remove_modules = module_obj.search(
             [('state', '=', 'to remove')])
@@ -406,7 +418,9 @@ class Connection:
             module_to_remove.button_uninstall_cancel()
         state = self.client.env.modules(module)
         if state:
-            if state.get('installed', False) or state.get('to upgrade', False)\
+            if install:
+                self.client.env.install(module)
+            elif state.get('installed', False) or state.get('to upgrade', False)\
                     or state.get('uninstallable'):
                 try:
                     module_id = module_obj.search([
