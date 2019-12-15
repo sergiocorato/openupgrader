@@ -254,7 +254,7 @@ class Connection:
             cwd=venv_path, shell=True).wait()
         if not os.path.isdir(os.path.join(venv_path, 'odoo')):
             subprocess.Popen([
-                'cd %s && git clone %s --single-branch -b %s --depth 1 odoo' % (
+                'cd %s && git clone %s -b %s --depth 1 odoo' % (
                     venv_path, odoo_repo, version)],
                 cwd=venv_path, shell=True).wait()
         else:
@@ -281,7 +281,7 @@ class Connection:
             repo_version = repo_text.split(' ')[1]
             if not os.path.isdir('%s/repos/%s' % (venv_path, repo_name)):
                 process = subprocess.Popen([
-                    'git clone %s --single-branch -b %s --depth=1 '
+                    'git clone %s -b %s --depth=1 '
                     '%s/repos/%s'
                     % (repo, repo_version, venv_path, repo_name)
                 ], cwd=venv_path, shell=True)
