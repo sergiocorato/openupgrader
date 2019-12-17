@@ -79,7 +79,7 @@ class Connection:
             load = 'web,web_kanban'
         if version == '12.0':
             load = 'base,web'
-        executable = 'openerp-server' if version in ['7.0', '8.0'] else 'odoo'
+        executable = 'openerp-server' if version in ['7.0', '8.0', '9.0'] else 'odoo'
         bash_command = "bin/%s " \
                        "--db_port=%s --xmlrpc-port=%s " \
                        "--logfile=%s/migration.log " \
@@ -222,6 +222,7 @@ class Connection:
             self.restore_db(from_version)
         # self.fixes.update_analitic_sal()
         ### DO MIGRATION to next version ###
+        self.delete_old_modules(from_version)
         self.start_odoo(to_version, update=True, migrate=True)
         self.uninstall_modules(to_version, after_migration=True)
         # self.fixes.fix_delivered_hours_sale()
@@ -261,8 +262,8 @@ class Connection:
             subprocess.Popen(['cd %s/odoo && git pull' % venv_path],
                              cwd=venv_path, shell=True).wait()
         commands = [
-            'bin/pip install -r odoo/requirements.txt',
-            'cd odoo && ../bin/pip install -e . ',
+            'bin/pip install --upgrade -r odoo/requirements.txt',
+            'cd odoo && ../bin/pip install --upgrade -e . ',
         ]
         for command in commands:
             subprocess.Popen(command, cwd=venv_path, shell=True).wait()
