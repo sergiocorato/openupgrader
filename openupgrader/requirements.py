@@ -6,7 +6,7 @@ import subprocess
 
 
 def create_pip_requirements(self, version):
-    self.start_odoo(version, update=False, migrate=True)
+    self.start_odoo(version)
     modules = self.client.env['ir.module.module'].search_read([
         ('state', '=', 'installed')
     ], ['name'])

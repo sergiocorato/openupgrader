@@ -64,7 +64,7 @@ class Connection:
         )
         time.sleep(5)
 
-    def start_odoo(self, version, update=False, migrate=False):
+    def start_odoo(self, version, update=False, migrate=True):
         """
         :param version: odoo version to start (8.0, 9.0, 10.0, ...)
         :param update: if True odoo will be updated with -u all and stopped
@@ -191,45 +191,43 @@ class Connection:
         if do_clean:
             # STEP1: create venv for current version to fix it
             self.create_venv_git_version(from_version, openupgrade=True)
-            # self.restore_filestore(from_version, from_version)
+            self.restore_filestore(from_version, from_version)
             self.restore_db(from_version)
             self.disable_mail(disable=True)
             # n.b. when update, at the end odoo service is stopped
-            self.start_odoo(from_version, update=True, migrate=True)
-            # clean commands via sql
-            receipt = self.receipts[from_version]
-            for part in receipt:
-                bash_commands = part.get('sql_commands', [])
-                for bash_command in bash_commands:
-                    command = ["psql -p %s -d %s -c \'%s\'"
-                               % (self.db_port, self.db, bash_command)]
-                    process = subprocess.Popen(command, shell=True)
-                    process.wait()
-                bash_update_commands = part.get('sql_update_commands', [])
-                for bash_update_command in bash_update_commands:
-                    upd_command = ['psql -p %s -d %s -c "%s"'
-                                   % (self.db_port, self.db, bash_update_command)]
-                    process = subprocess.Popen(upd_command, shell=True)
-                    process.wait()
-            self.delete_old_modules(from_version)
-            self.uninstall_modules(from_version, before_migration=True)
+            self.start_odoo(from_version, update=True)
             # self.fixes.set_product_with_wrong_uom_not_saleable()
             # self.fixes.fix_uom_invoiced_from_sale()
             # self.fixes.fix_uom_invoiced_from_purchase()
-        # restore db and filestore if not restored before
+        # restore db if not restored before
         elif restore:
-            self.restore_filestore(from_version, to_version)
             self.restore_db(from_version)
+        self.restore_filestore(from_version, to_version)
+        receipt = self.receipts[from_version]
+        for part in receipt:
+            bash_commands = part.get('sql_commands', [])
+            for bash_command in bash_commands:
+                command = ["psql -p %s -d %s -c \'%s\'"
+                           % (self.db_port, self.db, bash_command)]
+                process = subprocess.Popen(command, shell=True)
+                process.wait()
+            bash_update_commands = part.get('sql_update_commands', [])
+            for bash_update_command in bash_update_commands:
+                upd_command = ['psql -p %s -d %s -c "%s"'
+                               % (self.db_port, self.db, bash_update_command)]
+                process = subprocess.Popen(upd_command, shell=True)
+                process.wait()
         # self.fixes.update_analitic_sal()
         ### DO MIGRATION to next version ###
+        self.uninstall_modules(from_version, before_migration=True)
         self.delete_old_modules(from_version)
-        self.start_odoo(to_version, update=True, migrate=True)
+        self.start_odoo(to_version, update=True)
         self.uninstall_modules(to_version, after_migration=True)
         # self.fixes.fix_delivered_hours_sale()
         # if from_version == '8.0':
         #     self.fixes.update_product_track_service()
-        # self.dump_database(to_version)
-        # self.dump_filestore(to_version)
+        self.dump_database(to_version)
+        self.dump_filestore(to_version)
         if to_version in ['10.0', '11.0', '12.0']:
             requirements.create_pip_requirements(self, to_version)
         # self.fixes.fix_taxes()
@@ -255,7 +253,7 @@ class Connection:
             cwd=venv_path, shell=True).wait()
         if not os.path.isdir(os.path.join(venv_path, 'odoo')):
             subprocess.Popen([
-                'cd %s && git clone %s -b %s --depth 1 odoo' % (
+                'cd %s && git clone --single-branch %s -b %s --depth 1 odoo' % (
                     venv_path, odoo_repo, version)],
                 cwd=venv_path, shell=True).wait()
         else:
@@ -274,7 +272,10 @@ class Connection:
                 process = subprocess.Popen(
                     'mkdir %s' % path, cwd=venv_path, shell=True)
                 process.wait()
-
+        if os.path.isfile(os.path.join(venv_path, 'migration.log')):
+            process = subprocess.Popen(
+                'rm %s' % 'migration.log', cwd=venv_path, shell=True)
+            process.wait()
         repos = config.load_config('repos.yml', version)
         for repo_name in repos:
             repo_text = repos.get(repo_name)
@@ -282,7 +283,7 @@ class Connection:
             repo_version = repo_text.split(' ')[1]
             if not os.path.isdir('%s/repos/%s' % (venv_path, repo_name)):
                 process = subprocess.Popen([
-                    'git clone %s -b %s --depth=1 '
+                    'git clone %s --single-branch -b %s --depth 1 '
                     '%s/repos/%s'
                     % (repo, repo_version, venv_path, repo_name)
                 ], cwd=venv_path, shell=True)
@@ -305,7 +306,7 @@ class Connection:
                 break
 
     def database_cleanup(self, to_version):
-        self.start_odoo(to_version, update=False, migrate=True)
+        self.start_odoo(to_version)
         self.remove_modules()
         self.remove_modules('upgrade')
         self.client.env.install('database_cleanup')
@@ -349,7 +350,7 @@ class Connection:
         print(res1)
 
     def uninstall_modules(self, version, before_migration=False, after_migration=False):
-        self.start_odoo(version, update=False, migrate=True)
+        self.start_odoo(version)
         module_obj = self.client.env['ir.module.module']
         self.remove_modules()
         self.remove_modules('upgrade')
@@ -379,7 +380,7 @@ class Connection:
     def delete_old_modules(self, version):
         receipt = self.receipts[version]
         if [modules.get('delete', False) for modules in receipt]:
-            self.start_odoo(version, update=False, migrate=True)
+            self.start_odoo(version)
             module_obj = self.client.env['ir.module.module']
             for modules in receipt:
                 module_list = modules.get('delete', False)
