@@ -12,7 +12,7 @@ def create_pip_requirements(self, version):
     ], ['name'])
     self.modules = [x['name'] for x in modules]
     requirements = []
-    for module in modules:
+    for module in self.modules:
         odoo_modules = get_modules(self.venv_path, version)
         if module in odoo_modules:
             print('%s module in Odoo core' % module)
@@ -25,13 +25,13 @@ def create_pip_requirements(self, version):
         if not file_new:
             subprocess.Popen(
                 ['echo odoo%s-addon-%s > %s' % (
-                     version.split('.')[0], req['name'], receipt
+                     version.split('.')[0], req, receipt
                  )], shell=True)
             file_new = True
         else:
             subprocess.Popen(
                 ['echo odoo%s-addon-%s >> %s' % (
-                    version.split('.')[0], req['name'], receipt
+                    version.split('.')[0], req, receipt
                  )], shell=True)
     self.stop_odoo()
 

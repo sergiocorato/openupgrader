@@ -186,14 +186,14 @@ class Connection:
         process.wait()
 
     # MASTER function #####
-    def do_migration(self, from_version, to_version, do_clean=False, restore=False):
+    def do_migration(self, from_version, to_version, clean=False, restore=False, filestore=False):
         self.create_venv_git_version(to_version, openupgrade=True)
-        if do_clean:
+        if clean:
             # STEP1: create venv for current version to fix it
             self.create_venv_git_version(from_version, openupgrade=True)
-            self.restore_filestore(from_version, from_version)
+            if filestore:
+                self.restore_filestore(from_version, from_version)
             self.restore_db(from_version)
-            self.disable_mail(disable=True)
             # n.b. when update, at the end odoo service is stopped
             self.start_odoo(from_version, update=True)
             # self.fixes.set_product_with_wrong_uom_not_saleable()
@@ -202,32 +202,40 @@ class Connection:
         # restore db if not restored before
         elif restore:
             self.restore_db(from_version)
-        self.restore_filestore(from_version, to_version)
+        if filestore:
+            self.restore_filestore(from_version, to_version)
+        self.disable_mail(disable=True)
         receipt = self.receipts[from_version]
         for part in receipt:
             bash_commands = part.get('sql_commands', [])
             for bash_command in bash_commands:
                 command = ["psql -p %s -d %s -c \'%s\'"
                            % (self.db_port, self.db, bash_command)]
-                process = subprocess.Popen(command, shell=True)
-                process.wait()
+                subprocess.Popen(command, shell=True).wait()
             bash_update_commands = part.get('sql_update_commands', [])
             for bash_update_command in bash_update_commands:
                 upd_command = ['psql -p %s -d %s -c "%s"'
                                % (self.db_port, self.db, bash_update_command)]
-                process = subprocess.Popen(upd_command, shell=True)
-                process.wait()
+                subprocess.Popen(upd_command, shell=True).wait()
         # self.fixes.update_analitic_sal()
         ### DO MIGRATION to next version ###
         self.uninstall_modules(from_version, before_migration=True)
         self.delete_old_modules(from_version)
         self.start_odoo(to_version, update=True)
         self.uninstall_modules(to_version, after_migration=True)
+        receipt_after = self.receipts[to_version]
+        for part_after in receipt_after:
+            bash_after_commands = part_after.get('sql_after_migration_commands', [])
+            for bash_update_command in bash_after_commands:
+                aft_command = ['psql -p %s -d %s -c "%s"'
+                               % (self.db_port, self.db, bash_update_command)]
+                subprocess.Popen(aft_command, shell=True).wait()
         # self.fixes.fix_delivered_hours_sale()
         # if from_version == '8.0':
         #     self.fixes.update_product_track_service()
         self.dump_database(to_version)
-        self.dump_filestore(to_version)
+        if filestore:
+            self.dump_filestore(to_version)
         if to_version in ['10.0', '11.0', '12.0']:
             requirements.create_pip_requirements(self, to_version)
         # self.fixes.fix_taxes()
