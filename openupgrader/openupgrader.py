@@ -297,7 +297,7 @@ class Connection:
                 ], cwd=venv_path, shell=True)
                 process.wait()
             process = subprocess.Popen([
-                'cd %s/repos/%s && git pull' % (venv_path, repo_name)
+                'cd %s/repos/%s && git clean -df && git pull' % (venv_path, repo_name)
             ], cwd=venv_path, shell=True)
             process.wait()
             # copy modules to create an unique addons path
@@ -368,7 +368,7 @@ class Connection:
             if module_list:
                 for module_pair in module_list:
                     module_to_check = module_pair.split(' ')[0]
-                    module_to_install = module_pair.split(' ')[0]
+                    module_to_install = module_pair.split(' ')[1]
                     if module_obj.search([
                             ('name', '=', module_to_check),
                             ('state', '=', 'installed')]):
