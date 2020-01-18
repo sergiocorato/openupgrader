@@ -223,13 +223,14 @@ class Connection:
         self.delete_old_modules(from_version)
         self.start_odoo(to_version, update=True)
         self.uninstall_modules(to_version, after_migration=True)
-        receipt_after = self.receipts[to_version]
-        for part_after in receipt_after:
-            bash_after_commands = part_after.get('sql_after_migration_commands', [])
-            for bash_update_command in bash_after_commands:
-                aft_command = ['psql -p %s -d %s -c "%s"'
-                               % (self.db_port, self.db, bash_update_command)]
-                subprocess.Popen(aft_command, shell=True).wait()
+        # receipt_after = self.receipts[to_version] # UNUSED!!!
+        # for part_after in receipt_after:
+        #     bash_after_commands = part_after.get('sql_after_migration_commands', [])
+        #     if bash_after_commands:
+        #         for bash_update_command in bash_after_commands:
+        #             aft_command = ['psql -p %s -d %s -c "%s"'
+        #                            % (self.db_port, self.db, bash_update_command)]
+        #             subprocess.Popen(aft_command, shell=True).wait()
         # self.fixes.fix_delivered_hours_sale()
         # if from_version == '8.0':
         #     self.fixes.update_product_track_service()
