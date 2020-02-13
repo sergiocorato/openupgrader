@@ -164,7 +164,7 @@ class Connection:
     def restore_db(self, from_version):
         pg_bin_path = self.pg_bin_path
         process = subprocess.Popen(
-            ['%sdropdb --if-exists -p %s %s' % (pg_bin_path, self.db_port, self.db)],
+            ['%sdropdb -p %s %s' % (pg_bin_path, self.db_port, self.db)],
             shell=True)
         process.wait()
         process = subprocess.Popen(
@@ -196,16 +196,28 @@ class Connection:
             self.restore_db(from_version)
             # n.b. when update, at the end odoo service is stopped
             self.start_odoo(from_version, update=True)
-            # self.fixes.set_product_with_wrong_uom_not_saleable()
-            # self.fixes.fix_uom_invoiced_from_sale()
-            # self.fixes.fix_uom_invoiced_from_purchase()
         # restore db if not restored before
         elif restore:
             self.restore_db(from_version)
         if filestore:
             self.restore_filestore(from_version, to_version)
         self.disable_mail(disable=True)
-        receipt = self.receipts[from_version]
+        self.sql_fixes(self.receipts[from_version])
+        ### DO MIGRATION to next version ###
+        self.uninstall_modules(from_version, before_migration=True)
+        self.delete_old_modules(from_version)
+        self.start_odoo(to_version, update=True)
+        self.uninstall_modules(to_version, after_migration=True)
+        self.sql_fixes(self.receipts[to_version])
+        self.dump_database(to_version)
+        if filestore:
+            self.dump_filestore(to_version)
+        if to_version in ['10.0', '11.0', '12.0']:
+            requirements.create_pip_requirements(self, to_version)
+        # self.fixes.fix_taxes()
+        #todo remove aeroo reports
+
+    def sql_fixes(self, receipt):
         for part in receipt:
             bash_commands = part.get('sql_commands', [])
             for bash_command in bash_commands:
@@ -217,30 +229,6 @@ class Connection:
                 upd_command = ['psql -p %s -d %s -c "%s"'
                                % (self.db_port, self.db, bash_update_command)]
                 subprocess.Popen(upd_command, shell=True).wait()
-        # self.fixes.update_analitic_sal()
-        ### DO MIGRATION to next version ###
-        self.uninstall_modules(from_version, before_migration=True)
-        self.delete_old_modules(from_version)
-        self.start_odoo(to_version, update=True)
-        self.uninstall_modules(to_version, after_migration=True)
-        # receipt_after = self.receipts[to_version] # UNUSED!!!
-        # for part_after in receipt_after:
-        #     bash_after_commands = part_after.get('sql_after_migration_commands', [])
-        #     if bash_after_commands:
-        #         for bash_update_command in bash_after_commands:
-        #             aft_command = ['psql -p %s -d %s -c "%s"'
-        #                            % (self.db_port, self.db, bash_update_command)]
-        #             subprocess.Popen(aft_command, shell=True).wait()
-        # self.fixes.fix_delivered_hours_sale()
-        # if from_version == '8.0':
-        #     self.fixes.update_product_track_service()
-        self.dump_database(to_version)
-        if filestore:
-            self.dump_filestore(to_version)
-        if to_version in ['10.0', '11.0', '12.0']:
-            requirements.create_pip_requirements(self, to_version)
-        # self.fixes.fix_taxes()
-        #todo remove aeroo reports
 
     def post_migration(self, version):
         # re-enable mail servers and clean db

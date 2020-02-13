@@ -6,12 +6,6 @@ import subprocess
 
 
 class Fixes:
-    def __init__(self, db, user, password, db_port):
-        self.db = db
-        self.user = user
-        self.password = password
-        self.db_port = db_port
-
     # in migration to 10.0, some account.move.line created from account.invoice
     # missed tax_line_id
     # select name,date from account_move_line where tax_line_id is null and account_id
@@ -20,7 +14,8 @@ class Fixes:
     # fixme nella migrazione dalla 8.0 alla 10.0 non tutte le imposte acquisto vengono
     #  impostate con il campo conto liquidazione IVA! e l'iva indetraibile non viene
     #  ovviamente corretta con la nuova configurazione (padre-figlie)
-    # todo fix ir.config_parameter sempre a 'http://127.0.0.1:8069'
+    # todo dopo il ripristino del db e del filestore:
+    #  ripristinare filtri disabilitati perche invalidi
 
     def set_product_with_wrong_uom_not_saleable(self):
         # giorni: 29 e 26 > not saleable
@@ -106,156 +101,6 @@ class Fixes:
             logging.info('Fixed hours delivered for sale orders of project %s!'
                          % contract.name)
         self.stop_odoo()
-
-    def fix_uom_invoiced_from_sale(self):
-        self.start_odoo('8.0')
-        import logging
-        logging.basicConfig(filename='check_uom.log',
-                            level=logging.DEBUG)
-        sale_order_line_model = self.client.env['sale.order.line']
-        sale_lines = sale_order_line_model.search([
-            ('invoice_lines', '!=', False)])
-        i = 0
-        logging.info('sale_lines len = %d' % len(sale_lines))
-        for sale_line in sale_lines:
-            # 1. update product_uom in sale_order_line with product_id.uom_id
-            # 2. update uos_id in sale_order_line.invoice_lines (uom_id after migration
-            # 3. update uos_id in account_invoice_line with product_id.uom_id
-            # 4. update product_uom in purchase_order_line with product_id.uom_id
-            # fix uom in sale order lines
-            # if sale_line.product_id and sale_line.product_id.uom_id.category_id.id != \
-            #         sale_line.product_uom.category_id.id:
-            #     logging.info('syncronize sale line uom to sale line')
-            #     sale_line.product_uom = sale_line.product_id.uom_id
-            # fix uom in invoice lines
-            # logging.info('sale_line id %s with invoice_lines %s' % (
-            #     sale_line.id, sale_line.invoice_lines
-            # ))
-            # if len(set([x.uos_id.id for x in sale_line.invoice_lines])) > 1:
-            #     logging.info('Found more uos_id in invoice_lines for the '
-            #                  'same sale order line, in invoice %s'
-            #                  % [x.invoice_id.name for x in
-            #                     sale_line.invoice_lines])
-            for inv_line in sale_line.invoice_lines:
-                if not inv_line.uos_id:
-                    inv_line.uos_id = sale_line.product_uom
-                    logging.info('invoice_line %s do not have uom, set equal'
-                                 'to sale line uom %s' % (inv_line.id,
-                                                          sale_line.product_uom))
-                if inv_line.uos_id.category_id.id != \
-                        sale_line.product_uom.category_id.id:
-                    # invoice uom ctg differ from sale uom
-                    logging.info('invoice line %s differ uom %s from sale'
-                                 'line uom %s' % (inv_line.id, inv_line.uos_id,
-                                                  sale_line.product_uom))
-                    if inv_line.product_id:
-                        if sale_line.product_id:
-                            # either have product_id but with different uom ctg
-                            if inv_line.product_id.uom_id.category_id.id != \
-                                    sale_line.product_uom.category_id.id:
-                                # fix product_id uom in invoice
-                                inv_line.product_id.uom_id = sale_line. \
-                                    product_id.uom_id
-                                # fix uos_id in invoice line
-                                logging.info(
-                                    '#1 sale_line %s updated uom_id %s to %s'
-                                    % (
-                                       sale_line.id, sale_line.product_uom,
-                                       inv_line.uos_id))
-                        else:
-                            # invoice has a product_id while sale don't, so
-                            # update sale with uom of invoice
-                            logging.info(
-                                '#2 sale_line %s updated uom_id %s to %s' % (
-                                    sale_line.id, sale_line.product_uom,
-                                    inv_line.uos_id))
-                    else:
-                        logging.info(
-                            '#3 sale_line %s updated uom_id %s to %s' % (
-                                sale_line.id, sale_line.product_uom,
-                                inv_line.uos_id))
-                    sale_line.product_uom = inv_line.uos_id
-        self.stop_odoo()
-
-    def fix_uom_invoiced_from_purchase(self):
-        self.start_odoo('8.0')
-        import logging
-        logging.basicConfig(filename='check_uom_purchase.log',
-                            level=logging.DEBUG)
-        purchase_order_line_model = self.client.env['purchase.order.line']
-        purchase_lines = purchase_order_line_model.search([
-            ('invoice_lines', '!=', False)])
-        i = 0
-        logging.info('purchase_lines len = %d' % len(purchase_lines))
-        for purchase_line in purchase_lines:
-            # 1. update product_uom in sale_order_line with product_id.uom_id
-            # 2. update uos_id in sale_order_line.invoice_lines (uom_id after migration
-            # 3. update uos_id in account_invoice_line with product_id.uom_id
-            # 4. update product_uom in purchase_order_line with product_id.uom_id
-            # fix uom in sale order lines
-            # if purchase_line.product_id and purchase_line.product_id.uom_id.\
-            #         category_id.id != \
-            #         purchase_line.product_uom.category_id.id:
-            #     purchase_line.product_uom = purchase_line.product_id.uom_id
-            # fix uom in invoice lines
-            logging.info('purchase_line id %s with invoice_lines %s' % (
-                purchase_line.id, purchase_line.invoice_lines
-            ))
-            for inv_line in purchase_line.invoice_lines:
-                if not inv_line.uos_id:
-                    inv_line.uos_id = purchase_line.product_uom
-                if inv_line.uos_id.category_id.id != \
-                        purchase_line.product_uom.category_id.id:
-                    # invoice uom ctg differ from sale uom
-                    if inv_line.product_id:
-                        if purchase_line.product_id:
-                            # either have product_id but with different uom ctg
-                            if inv_line.product_id.uom_id.category_id.id != \
-                                    purchase_line.product_uom.category_id.id:
-                                # fix product_id uom in invoice
-                                # inv_line.product_id.uom_id = sale_line. \
-                                #     product_id.uom_id
-                                # fix uos_id in invoice line
-                                logging.info(
-                                    '#1 purchase_line %s updated uom_id %s to %s'
-                                    % (
-                                        purchase_line.id,
-                                        purchase_line.product_uom,
-                                        inv_line.uos_id))
-                        else:
-                            # invoice has a product_id while sale don't, so
-                            # update sale with uom of invoice
-                            logging.info(
-                                '#2 purchase_line %s updated uom_id %s to %s' % (
-                                    purchase_line.id, purchase_line.product_uom,
-                                    inv_line.uos_id))
-                    else:
-                        logging.info(
-                            '#3 purchase_line %s updated uom_id %s to %s' % (
-                                purchase_line.id, purchase_line.product_uom,
-                                inv_line.uos_id))
-                    # write all invoice lines, then break
-                    for line in purchase_line.invoice_lines:
-                        logging.info(
-                            '#4 inv line %s updated uom_id %s to %s'
-                            % (
-                                line.id,
-                                line.uos_id,
-                                purchase_line.product_uom))
-                        line.uos_id = purchase_line.product_uom
-                    break
-        purchase_lines = purchase_order_line_model.search([
-            ('partner_id', '=', 378)])
-        for purchase_line in purchase_lines:
-            purchase_line.product_uom = 1
-        invoice_lines = self.client.env['account.invoice.line'].search([
-            ('partner_id', '=', 378)])
-        for invoice_line in invoice_lines:
-            invoice_line.uos_id = 1
-        self.stop_odoo()
-
-    # todo dopo il ripristino del db e del filestore:
-    #  ripristinare filtri disabilitati perche invalidi
 
     def fix_taxes(self):
         # correzione da fare sulle imposte dopo la migrazione
