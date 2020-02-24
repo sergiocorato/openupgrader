@@ -53,7 +53,7 @@ class Connection:
         self.venv_path = os.path.join(self.path, 'tmp_venv')
         self.pg_bin_path = '/usr/lib/postgresql/11/bin/' if self.db_port in [
             '5439', '5440', '5441'] else ''
-        self.receipts = config.load_receipts('receipts.yml')
+        self.receipts = config.load_receipts('openupgrade_config.yml')
 
     def odoo_connect(self):
         self.client = odooly.Client(
