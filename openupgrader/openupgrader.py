@@ -186,7 +186,8 @@ class Connection:
         process.wait()
 
     # MASTER function #####
-    def do_migration(self, from_version, to_version, clean=False, restore=False, filestore=False):
+    def do_migration(self, from_version, to_version, clean=False, restore=False,
+                     filestore=False):
         self.create_venv_git_version(to_version, openupgrade=True)
         if clean:
             # STEP1: create venv for current version to fix it
@@ -273,7 +274,7 @@ class Connection:
             process = subprocess.Popen(
                 'rm %s' % 'migration.log', cwd=venv_path, shell=True)
             process.wait()
-        repos = config.load_config('repos.yml', version)
+        repos = config.load_config('openupgrader_repos.yml', version)
         for repo_name in repos:
             repo_text = repos.get(repo_name)
             repo = repo_text.split(' ')[0]
