@@ -197,7 +197,7 @@ class Connection:
             self.restore_db(from_version)
             # n.b. when update, at the end odoo service is stopped
             self.start_odoo(from_version, update=True)
-        # restore db if not restored before
+        # restore db if not restored before (not needed if migration between more version)
         elif restore:
             self.restore_db(from_version)
         if filestore:
@@ -316,7 +316,10 @@ class Connection:
             'cleanup.purge.wizard.property'
         ]:
             self.database_cleanup_wizard(model)
-        self.client.env.uninstall('database_cleanup')
+        module_id = self.client.env['ir.module.module'].search([
+            ('name', '=', 'database_cleanup')])
+        module_id.write({'state': 'to remove'})
+        self.client.env.upgrade()
         self.stop_odoo()
 
     def database_cleanup_wizard(self, model):
@@ -425,8 +428,11 @@ class Connection:
                 try:
                     module_id = module_obj.search([
                         ('name', '=', module)])
-                    self.client.env.uninstall(module)
+                    module_id.write({'state': 'to remove'})
+                    self.client.env.upgrade()
                     if module_id:
                         module_obj.unlink(module_id.id)
-                except:
+                except Exception as e:
+                    print('Module %s not uninstalled for %s' % (
+                        module, e))
                     pass
