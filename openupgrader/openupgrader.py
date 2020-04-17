@@ -255,7 +255,9 @@ class Connection:
                     venv_path, odoo_repo, version)],
                 cwd=venv_path, shell=True).wait()
         else:
-            subprocess.Popen(['cd %s/odoo && git pull' % venv_path],
+            subprocess.Popen(['cd %s/odoo && git reset --hard origin/%s && git pull '
+                              '&& git reset --hard origin/%s' % (
+                              venv_path, version, version)],
                              cwd=venv_path, shell=True).wait()
         commands = [
             'bin/pip install --upgrade -r odoo/requirements.txt',
@@ -274,7 +276,7 @@ class Connection:
             process = subprocess.Popen(
                 'rm %s' % 'migration.log', cwd=venv_path, shell=True)
             process.wait()
-        repos = config.load_config('openupgrader_repos.yml', version)
+        repos = config.load_config('openupgrade_repos.yml', version)
         for repo_name in repos:
             repo_text = repos.get(repo_name)
             repo = repo_text.split(' ')[0]
@@ -287,7 +289,9 @@ class Connection:
                 ], cwd=venv_path, shell=True)
                 process.wait()
             process = subprocess.Popen([
-                'cd %s/repos/%s && git clean -df && git pull' % (venv_path, repo_name)
+                'cd %s/repos/%s && git reset --hard origin/%s && git pull '
+                '&& git reset --hard origin/%s' % (
+                    venv_path, repo_name, repo_version, repo_version)
             ], cwd=venv_path, shell=True)
             process.wait()
             # copy modules to create an unique addons path
@@ -338,7 +342,8 @@ class Connection:
         if model == 'cleanup.purge.wizard.column':
             purge_line_ids = [x.id for x in wiz_id.purge_line_ids
                               if x.name not in ['openupgrade_legacy_9_0_help',
-                                                'openupgrade_legacy_9_0_type']]
+                                                'openupgrade_legacy_9_0_type',
+                                                'openupgrade_legacy_11_0_usage']]
             if purge_line_ids:
                 original_purge_line_ids = [x.id for x in wiz_id.purge_line_ids
                                            if id not in purge_line_ids]
@@ -425,14 +430,15 @@ class Connection:
                 self.client.env.install(module)
             elif state.get('installed', False) or state.get('to upgrade', False)\
                     or state.get('uninstallable'):
-                try:
-                    module_id = module_obj.search([
-                        ('name', '=', module)])
-                    module_id.write({'state': 'to remove'})
-                    self.client.env.upgrade()
-                    if module_id:
-                        module_obj.unlink(module_id.id)
-                except Exception as e:
-                    print('Module %s not uninstalled for %s' % (
-                        module, e))
-                    pass
+                module_id = module_obj.search([('name', '=', module)])
+                if module_id:
+                    time.sleep(10)
+                    try:
+                        module_id.button_immediate_uninstall()
+                        print('Module %s uninstalled' % module)
+                        module_id.unlink()
+                    except Exception as e:
+                        print('Module %s not uninstalled for %s' % (module, e))
+                        pass
+                else:
+                    print('Module %s not found' % module)
