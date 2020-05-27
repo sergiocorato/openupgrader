@@ -186,11 +186,11 @@ class Connection:
         process.wait()
 
     # MASTER function #####
-    def do_migration(self, from_version, to_version, restore_db_filestore_update=False,
+    def do_migration(self, from_version, to_version, restore_db_update=False,
                      restore_db_only=False,
                      filestore=False):
         self.create_venv_git_version(to_version, openupgrade=True)
-        if restore_db_filestore_update:
+        if restore_db_update:
             # STEP1: create venv for current version to fix it
             self.create_venv_git_version(from_version, openupgrade=True)
             if filestore:
