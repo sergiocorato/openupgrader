@@ -1,11 +1,11 @@
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 import os
 import kaptan
 
 
 def load_config(config, version):
     if not os.path.exists(config):
-        local_path = os.path.join(os.path.expanduser('~'), config)
+        local_path = os.path.join(os.path.expanduser('~'), 'Sviluppo', 'manager', config)
         if not os.path.exists(local_path):
             raise Exception('Unable to find configuration file: %s' % config)
         else:
@@ -25,7 +25,7 @@ def load_config(config, version):
 
 def load_receipts(config):
     if not os.path.exists(config):
-        local_path = os.path.join(os.path.expanduser('~'), config)
+        local_path = os.path.join(os.path.expanduser('~'), 'Sviluppo', 'manager', config)
         if not os.path.exists(local_path):
             raise Exception('Unable to find receipts file: %s' % config)
         else:

@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 # Copyright 2019 Sergio Corato <https://github.com/sergiocorato>
 # License LGPL-3.0 or later (http://www.gnu.org/licenses/lgpl.html).
 
@@ -7,8 +7,8 @@ import subprocess
 import time
 import os
 import signal
-import config
-import requirements
+from main import config
+from main import requirements
 
 # todo update all account.move.line with account_account no more special
 #  for payable/receivable
@@ -206,9 +206,11 @@ class Connection:
         self.disable_mail(disable=True)
         self.sql_fixes(self.receipts[from_version])
         ### DO MIGRATION to next version ###
+        self.auto_install_modules(from_version)
         self.uninstall_modules(from_version, before_migration=True)
         self.delete_old_modules(from_version)
         self.start_odoo(to_version, update=True)
+        self.auto_install_modules(to_version)
         self.uninstall_modules(to_version, after_migration=True)
         self.sql_fixes(self.receipts[to_version])
         self.dump_database(to_version)
@@ -356,7 +358,7 @@ class Connection:
         res1 = wiz_id.purge_all()
         print(res1)
 
-    def uninstall_modules(self, version, before_migration=False, after_migration=False):
+    def auto_install_modules(self, version):
         self.start_odoo(version)
         module_obj = self.client.env['ir.module.module']
         self.remove_modules()
@@ -372,6 +374,14 @@ class Connection:
                             ('name', '=', module_to_check),
                             ('state', '=', 'installed')]):
                         self.client.env.install(module_to_install)
+        self.stop_odoo()
+
+    def uninstall_modules(self, version, before_migration=False, after_migration=False):
+        self.start_odoo(version)
+        self.remove_modules()
+        self.remove_modules('upgrade')
+        receipt = self.receipts[version]
+        for modules in receipt:
             if after_migration:
                 modules_to_uninstall = modules.get('uninstall_after_migration', False)
                 if modules_to_uninstall:
@@ -433,7 +443,6 @@ class Connection:
                     or state.get('uninstallable'):
                 module_id = module_obj.search([('name', '=', module)])
                 if module_id:
-                    time.sleep(10)
                     try:
                         module_id.button_immediate_uninstall()
                         print('Module %s uninstalled' % module)
