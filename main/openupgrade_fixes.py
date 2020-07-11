@@ -101,22 +101,3 @@ class Fixes:
             logging.info('Fixed hours delivered for sale orders of project %s!'
                          % contract.name)
         self.stop_odoo()
-
-    def fix_taxes(self):
-        # correzione da fare sulle imposte dopo la migrazione
-        # la correzione durante la migrazione pare complicata
-        tax_obj = self.client.env['account.tax']
-        for tax in tax_obj.search([
-            ('children_tax_ids', '!=', False),
-            ('amount_type', '=', 'group'),
-        ]):
-            first_child_amount = 0.0
-            print('Fixed tax %s' % tax.name)
-            for child_tax in tax.children_tax_ids:
-                child_tax.amount_type = 'percent'
-                if child_tax.amount == 0.0:
-                    child_tax.amount = (tax.amount * 100) - first_child_amount
-                else:
-                    child_tax.amount = tax.amount * child_tax.amount
-                first_child_amount = child_tax.amount
-                print('Fixed child tax %s' % child_tax.name)

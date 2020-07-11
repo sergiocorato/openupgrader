@@ -187,9 +187,9 @@ class Connection:
 
     # MASTER function #####
     def do_migration(self, from_version, to_version, restore_db_update=False,
-                     restore_db_only=False,
-                     filestore=False):
-        self.create_venv_git_version(to_version, openupgrade=True)
+                     restore_db_only=False, filestore=False):
+        # self.create_venv_git_version(to_version, openupgrade=True)
+        # self.create_venv_git_version(from_version, openupgrade=True)
         if restore_db_update:
             # STEP1: create venv for current version to fix it
             self.create_venv_git_version(from_version, openupgrade=True)
@@ -209,6 +209,8 @@ class Connection:
         self.auto_install_modules(from_version)
         self.uninstall_modules(from_version, before_migration=True)
         self.delete_old_modules(from_version)
+        if to_version == '11.0':
+            self.fix_taxes(from_version)
         self.start_odoo(to_version, update=True)
         self.auto_install_modules(to_version)
         self.uninstall_modules(to_version, after_migration=True)
@@ -218,8 +220,28 @@ class Connection:
             self.dump_filestore(to_version)
         if to_version in ['10.0', '11.0', '12.0']:
             requirements.create_pip_requirements(self, to_version)
-        # self.fixes.fix_taxes()
         #todo remove aeroo reports
+
+    def fix_taxes(self, version):
+        # correzione da fare sulle imposte prima della migrazione alla v.11.0 altrimenti
+        # non può calcolare correttamente le ex-imposte parzialmente deducibili
+        self.start_odoo(version)
+        tax_obj = self.client.env['account.tax']
+        for tax in tax_obj.search([
+            ('children_tax_ids', '!=', False),
+            ('amount_type', '=', 'group'),
+        ]):
+            first_child_amount = 0.0
+            print('Fixed tax %s' % tax.name)
+            for child_tax in tax.children_tax_ids:
+                child_tax.amount_type = 'percent'
+                if child_tax.amount == 0.0:
+                    child_tax.amount = (tax.amount * 100) - first_child_amount
+                else:
+                    child_tax.amount = tax.amount * child_tax.amount
+                first_child_amount = child_tax.amount
+                print('Fixed child tax %s' % child_tax.name)
+        self.stop_odoo()
 
     def sql_fixes(self, receipt):
         for part in receipt:
