@@ -188,7 +188,9 @@ class Connection:
     # MASTER function #####
     def do_migration(self, from_version, to_version, restore_db_update=False,
                      restore_db_only=False, filestore=False):
-        # self.create_venv_git_version(to_version, openupgrade=True)
+        to_branch = to_version if len(to_version) > 4 else False
+        to_version = to_version[:4]
+        self.create_venv_git_version(to_version, to_branch, openupgrade=True)
         # self.create_venv_git_version(from_version, openupgrade=True)
         if restore_db_update:
             # STEP1: create venv for current version to fix it
@@ -261,7 +263,7 @@ class Connection:
         self.disable_mail(disable=False)
         self.database_cleanup(version)
 
-    def create_venv_git_version(self, version, openupgrade=False):
+    def create_venv_git_version(self, version, branch=False, openupgrade=False):
         venv_path = '%s/%s%s' % (
             self.venv_path, 'openupgrade' if openupgrade else 'standard',
             version)
@@ -277,8 +279,13 @@ class Connection:
         if not os.path.isdir(os.path.join(venv_path, 'odoo')):
             subprocess.Popen([
                 'cd %s && git clone --single-branch %s -b %s --depth 1 odoo' % (
-                    venv_path, odoo_repo, version)],
+                    venv_path, odoo_repo, branch or version)],
                 cwd=venv_path, shell=True).wait()
+        elif branch:
+            subprocess.Popen(['cd %s/odoo && git reset --hard origin/%s && git pull '
+                              'origin %s' % (
+                                  venv_path, version, branch)],
+                             cwd=venv_path, shell=True).wait()
         else:
             subprocess.Popen(['cd %s/odoo && git reset --hard origin/%s && git pull '
                               '&& git reset --hard origin/%s' % (
