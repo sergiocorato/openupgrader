@@ -83,6 +83,7 @@ class Connection:
         bash_command = "bin/%s " \
                        "--db_port=%s --xmlrpc-port=%s " \
                        "--logfile=%s/migration.log " \
+                       "--limit-time-cpu=600 --limit-time-real=1200 "\
                        "--addons-path=" \
                        "%s/odoo/addons,%s/addons-extra%s " \
                        "--load=%s " % (
@@ -320,11 +321,21 @@ class Connection:
                     % (repo, repo_version, venv_path, repo_name)
                 ], cwd=venv_path, shell=True)
                 process.wait()
-            process = subprocess.Popen([
-                'cd %s/repos/%s && git reset --hard origin/%s && git pull '
-                '&& git reset --hard origin/%s' % (
-                    venv_path, repo_name, repo_version, repo_version)
-            ], cwd=venv_path, shell=True)
+            if len(repo_version) > 4:
+                base_version = repo_version[:4]
+                origin = 'sergiocorato'
+                process = subprocess.Popen([
+                    'cd %s/repos/%s && git reset --hard %s/%s && '
+                    'git remote update && git checkout %s/%s' % (
+                        venv_path, repo_name, origin, base_version, origin,
+                        repo_version)
+                ], cwd=venv_path, shell=True)
+            else:
+                process = subprocess.Popen([
+                    'cd %s/repos/%s && git reset --hard origin/%s && git pull '
+                    '&& git reset --hard origin/%s' % (
+                        venv_path, repo_name, repo_version, repo_version)
+                ], cwd=venv_path, shell=True)
             process.wait()
             # copy modules to create an unique addons path
             for root, dirs, files in os.walk(
