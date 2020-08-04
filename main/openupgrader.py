@@ -322,8 +322,10 @@ class Connection:
                 ], cwd=venv_path, shell=True)
                 process.wait()
             if len(repo_version) > 4:
+                origin = 'origin'
                 base_version = repo_version[:4]
-                origin = 'sergiocorato'
+                if repo_name == 'account-financial-tools':
+                    origin = 'sergiocorato'
                 process = subprocess.Popen([
                     'cd %s/repos/%s && git reset --hard %s/%s && '
                     'git remote update && git checkout %s/%s' % (
