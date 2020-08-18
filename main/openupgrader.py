@@ -192,6 +192,9 @@ class Connection:
         to_branch = to_version if len(to_version) > 4 else False
         to_version = to_version[:4]
         self.create_venv_git_version(to_version, to_branch, openupgrade=True)
+        # FIXME NB.: Per i test di migrazione alla 10.0 rimosso il compute da
+        #  /tmp_venv/openupgrade10.0/odoo/addons/product/models$ cat product_template.py
+        #  altrimenti ci mette ore
         # self.create_venv_git_version(from_version, openupgrade=True)
         if restore_db_update:
             # STEP1: create venv for current version to fix it
@@ -364,7 +367,10 @@ class Connection:
             'cleanup.purge.wizard.data',
             'cleanup.purge.wizard.property'
         ]:
-            self.database_cleanup_wizard(model)
+            try:
+                self.database_cleanup_wizard(model)
+            except Exception:
+                pass
         module_id = self.client.env['ir.module.module'].search([
             ('name', '=', 'database_cleanup')])
         module_id.write({'state': 'to remove'})
@@ -403,8 +409,7 @@ class Connection:
     def auto_install_modules(self, version):
         self.start_odoo(version)
         module_obj = self.client.env['ir.module.module']
-        self.remove_modules()
-        self.remove_modules('upgrade')
+        # self.remove_modules()
         receipt = self.receipts[version]
         for modules in receipt:
             module_list = modules.get('auto_install', False)
@@ -420,8 +425,7 @@ class Connection:
 
     def uninstall_modules(self, version, before_migration=False, after_migration=False):
         self.start_odoo(version)
-        self.remove_modules()
-        self.remove_modules('upgrade')
+        # self.remove_modules()
         receipt = self.receipts[version]
         for modules in receipt:
             if after_migration:
