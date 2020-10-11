@@ -30,8 +30,9 @@ class Connection:
         mig = openupgrade.Connection(...)
         mig.do_migration(from_version=[], to_version=[], clean=True)
         mig.do_migration('8.0', '9.0', restore_db_update=True, filestore=True)
-        mig.do_migration('9.0', '10.0_mig_repair_only', restore_db_only=True,
-                         filestore=True)
+        mig.do_migration('9.0', '10.0', filestore=True)
+        mig.do_migration('10.0', '11.0', filestore=True)
+        mig.do_migration('11.0', '12.0', filestore=True)
         n.b.: per il momento è supportata solo la migrazione di 1 versione per
         volta
         :param db: il database da migrare (il nuovo nome)
@@ -205,6 +206,7 @@ class Connection:
             if filestore:
                 self.restore_filestore(from_version, from_version)
             self.restore_db(from_version)
+            self.disable_mail(disable=True)
             # n.b. when update, at the end odoo service is stopped
             self.start_odoo(from_version, update=True)
         # restore db if not restored before (not needed if migration between more version)
