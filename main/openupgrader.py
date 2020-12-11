@@ -408,23 +408,15 @@ class Connection:
                     % (repo, repo_version, venv_path, repo_name)
                 ], cwd=venv_path, shell=True)
                 process.wait()
-            if len(repo_version) > 4:
-                origin = 'origin'
-                base_version = repo_version[:4]
-                if repo_name == 'account-financial-tools':
-                    origin = 'sergiocorato'
-                process = subprocess.Popen([
-                    'cd %s/repos/%s && git reset --hard %s/%s && '
-                    'git remote update && git checkout %s/%s' % (
-                        venv_path, repo_name, origin, base_version, origin,
-                        repo_version)
-                ], cwd=venv_path, shell=True)
-            else:
-                process = subprocess.Popen([
-                    'cd %s/repos/%s && git reset --hard origin/%s && git pull '
-                    '&& git reset --hard origin/%s' % (
-                        venv_path, repo_name, repo_version, repo_version)
-                ], cwd=venv_path, shell=True)
+            process = subprocess.Popen([
+                'cd %s/repos/%s '
+                '&& git remote set-branches --add origin %s '
+                '&& git fetch '
+                '&& git checkout origin/%s' % (
+                    venv_path, repo_name,
+                    repo_version,
+                    repo_version)
+            ], cwd=venv_path, shell=True)
             process.wait()
             # copy modules to create an unique addons path
             for root, dirs, files in os.walk(
