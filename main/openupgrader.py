@@ -380,8 +380,10 @@ class Connection:
                               venv_path, version, version)],
                              cwd=venv_path, shell=True).wait()
         commands = [
-            'bin/pip install --upgrade -r odoo/requirements.txt',
-            'cd odoo && ../bin/pip install --upgrade -e . ',
+            'bin/pip install --use-deprecated=legacy-resolver -r '
+            'odoo/requirements.txt',
+            'cd odoo && ../bin/pip install --use-deprecated=legacy-resolver '
+            ' -e . ',
         ]
         for command in commands:
             subprocess.Popen(command, cwd=venv_path, shell=True).wait()
