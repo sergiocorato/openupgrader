@@ -487,7 +487,8 @@ class Connection:
     def auto_install_modules(self, version):
         self.start_odoo(version)
         module_obj = self.client.env['ir.module.module']
-        # self.remove_modules()
+        if version == '12.0':
+            self.remove_modules('upgrade')
         receipt = self.receipts[version]
         for modules in receipt:
             module_list = modules.get('auto_install', False)
@@ -503,7 +504,8 @@ class Connection:
 
     def uninstall_modules(self, version, before_migration=False, after_migration=False):
         self.start_odoo(version)
-        # self.remove_modules()
+        if version == '12.0':
+            self.remove_modules('upgrade')
         receipt = self.receipts[version]
         for modules in receipt:
             if after_migration:
