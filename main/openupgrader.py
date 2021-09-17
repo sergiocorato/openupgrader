@@ -10,13 +10,6 @@ import signal
 from main import config
 from main import requirements
 
-# todo update all account.move.line with account_account no more special
-#  for payable/receivable
-# i movimenti contabili dei clienti/fornitori sulla 8.0 hanno un conto
-# specifico con subaccount,
-# mentre senza andrebbero messi nel conto generico (14 o 40)
-# todo 1: check if financial reports etc are ok without subaccount
-
 
 class Connection:
     def __init__(self, db, user, password, db_port='5432'):
@@ -27,8 +20,8 @@ class Connection:
         e filestore.tar
         e lanciare con
         import openupgrade
-        mig = openupgrade.Connection(...)
-        mig.do_migration(from_version=[], to_version=[], clean=True)
+        mig = openupgrade.Connection('afmacerp', 'amministratore_afmac', 'pw..', '5441')
+        mig.do_migration(from_version=[], to_version=[])
         mig.do_migration('8.0', '9.0', restore_db_update=True, filestore=True)
         mig.do_migration('9.0', '10.0', filestore=True)
         mig.do_migration('10.0', '11.0', filestore=True)
@@ -43,7 +36,7 @@ class Connection:
         xmlrpc_port: la porta su cui è accessibile il servizio - viene
         impostata come 80 + i due numeri finali della porta del db
         n.b. non deve essere in uso da altre istanze
-        n.b. per comodità ho creato un cluster di postgres 11 con la porta 5440
+        n.b. per comodità ho creato dei cluster di postgres 11 con le porte 5439-40-41
         in mancanza va con il postgres di default nella porta indicata
         """
         self.db = db
@@ -362,9 +355,12 @@ class Connection:
             odoo_repo = 'https://github.com/sergiocorato/OpenUpgrade.git'
         if not os.path.isdir(venv_path):
             subprocess.Popen(['mkdir -p %s' % venv_path], shell=True).wait()
-        subprocess.Popen([
-            'virtualenv -p /usr/bin/python%s %s' % (py_version, venv_path)],
-            cwd=venv_path, shell=True).wait()
+        if version != '10.0':
+            # do not recreate virtualenv as it regenerate file with bug in split()
+            # ../openupgrade10.0/lib/python2.7/site-packages/pip/_internal/vcs/git.py
+            subprocess.Popen([
+                'virtualenv -p /usr/bin/python%s %s' % (py_version, venv_path)],
+                cwd=venv_path, shell=True).wait()
         if not os.path.isdir(os.path.join(venv_path, 'odoo')):
             subprocess.Popen([
                 'cd %s && git clone --single-branch %s -b %s --depth 1 odoo' % (
