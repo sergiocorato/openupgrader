@@ -355,7 +355,7 @@ class Connection:
             odoo_repo = 'https://github.com/sergiocorato/OpenUpgrade.git'
         if not os.path.isdir(venv_path):
             subprocess.Popen(['mkdir -p %s' % venv_path], shell=True).wait()
-        if version != '10.0':
+        if version not in ['7.0', '8.0', '9.0', '10.0']:
             # do not recreate virtualenv as it regenerate file with bug in split()
             # ../openupgrade10.0/lib/python2.7/site-packages/pip/_internal/vcs/git.py
             subprocess.Popen([
