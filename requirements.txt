@@ -1,7 +1,3 @@
 kaptan
 odooly
 mysql-connector-python
-wheel==0.31.1
-click
-appdirs
-twine
