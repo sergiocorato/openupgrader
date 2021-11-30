@@ -38,6 +38,12 @@ class Connection:
         n.b. non deve essere in uso da altre istanze
         n.b. per comodità ho creato dei cluster di postgres 11 con le porte 5439-40-41
         in mancanza va con il postgres di default nella porta indicata
+        troubleshooting:
+        per correggere il problema
+        can't find '__main__' module in '/usr/share/python-wheels/pep517-0.8.2-py2.py3
+        -none-any.whl/pep517/_in_process.py'
+        e altri, ho forzato la reinstallazione delle varie librerie
+        ../bin/pip install --force-reinstall -r requirements.txt
         """
         self.db = db
         self.user = user
