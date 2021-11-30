@@ -348,14 +348,13 @@ class Connection:
         venv_path = '%s/%s%s' % (
             self.venv_path, 'openupgrade' if openupgrade else 'standard',
             version)
-        py_version = '' if version in ['7.0', '8.0', '9.0', '10.0'] \
-            else '3.5' if version == '11.0' else '3.6'
+        py_version = '2.7' if version in ['7.0', '8.0', '9.0', '10.0'] \
+            else '3.5' if version == '11.0' else '3.7'
         odoo_repo = 'https://github.com/OCA/OCB.git'
         if openupgrade:
             odoo_repo = 'https://github.com/sergiocorato/OpenUpgrade.git'
         if not os.path.isdir(venv_path):
             subprocess.Popen(['mkdir -p %s' % venv_path], shell=True).wait()
-        if version not in ['7.0', '8.0', '9.0', '10.0']:
             # do not recreate virtualenv as it regenerate file with bug in split()
             # ../openupgrade10.0/lib/python2.7/site-packages/pip/_internal/vcs/git.py
             subprocess.Popen([
