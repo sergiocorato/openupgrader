@@ -208,7 +208,7 @@ class Connection:
             self.disable_mail(disable=True)
             # n.b. when update, at the end odoo service is stopped
             self.start_odoo(from_version, update=True)
-        # restore db if not restored before (not needed if migration between more version)
+        # restore db if not restored before, not needed if migration for more version
         elif restore_db_only:
             self.restore_db(from_version)
         if filestore:
