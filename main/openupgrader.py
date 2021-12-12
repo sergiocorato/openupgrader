@@ -191,10 +191,11 @@ class Connection:
 
     # MASTER function #####
     def do_migration(self, from_version, to_version, restore_db_update=False,
-                     restore_db_only=False, filestore=False):
+                     restore_db_only=False, filestore=False, create_venv=True):
         to_branch = to_version if len(to_version) > 4 else False
         to_version = to_version[:4]
-        self.create_venv_git_version(to_version, to_branch, openupgrade=True)
+        if create_venv:
+            self.create_venv_git_version(to_version, to_branch, openupgrade=True)
         # FIXME NB.: Per i test di migrazione alla 10.0 rimosso il compute da
         #  /tmp_venv/openupgrade10.0/odoo/addons/product/models$ cat product_template.py
         #  altrimenti ci mette ore
