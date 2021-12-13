@@ -207,7 +207,7 @@ class Connection:
                 self.restore_filestore(from_version, from_version)
             self.restore_db(from_version)
             self.disable_mail(disable=True)
-            # n.b. when update, at the end odoo service is stopped
+            # n.b. when updating, at the end odoo service is stopped
             self.start_odoo(from_version, update=True)
         # restore db if not restored before, not needed if migration for more version
         elif restore_db_only:
@@ -216,7 +216,7 @@ class Connection:
             self.restore_filestore(from_version, to_version)
         self.disable_mail(disable=True)
         self.sql_fixes(self.receipts[from_version])
-        ### DO MIGRATION to next version ###
+        # DO MIGRATION to next version ###
         self.auto_install_modules(from_version)
         self.uninstall_modules(from_version, before_migration=True)
         self.delete_old_modules(from_version)
