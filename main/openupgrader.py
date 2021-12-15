@@ -229,6 +229,12 @@ class Connection:
         self.auto_install_modules(to_version)
         self.uninstall_modules(to_version, after_migration=True)
         self.sql_fixes(self.receipts[to_version])
+        if to_version == '10.0':
+            self.start_odoo(to_version)
+            self.remove_modules('upgrade')
+            self.remove_modules()
+            self.install_uninstall_module('l10n_it_intrastat')
+            self.stop_odoo()
         self.dump_database(to_version)
         if filestore:
             self.dump_filestore(to_version)
@@ -356,7 +362,7 @@ class Connection:
             self.venv_path, 'openupgrade' if openupgrade else 'standard',
             version)
         py_version = '2.7' if version in ['7.0', '8.0', '9.0', '10.0'] \
-            else '3.5' if version == '11.0' else '3.7'
+            else '3.6' if version == '11.0' else '3.7'
         odoo_repo = 'https://github.com/OCA/OCB.git'
         if openupgrade:
             odoo_repo = 'https://github.com/sergiocorato/OpenUpgrade.git'
