@@ -362,7 +362,7 @@ class Connection:
             self.venv_path, 'openupgrade' if openupgrade else 'standard',
             version)
         py_version = '2.7' if version in ['7.0', '8.0', '9.0', '10.0'] \
-            else '3.6' if version == '11.0' else '3.7'
+            else '3.5' if version == '11.0' else '3.7'
         odoo_repo = 'https://github.com/OCA/OCB.git'
         if openupgrade:
             odoo_repo = 'https://github.com/sergiocorato/OpenUpgrade.git'
