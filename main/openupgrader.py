@@ -17,10 +17,10 @@ class Connection:
         PROCEDURA:
         copiare nella cartella ~ i file:
         database.gz [file creato con pg_dump [database] | gzip > database.gz
-        e filestore.tar
+        e filestore.tar [file creato con tar -cvzf filestore.tar ./filestore
         e lanciare con
-        import openupgrade
-        mig = openupgrade.Connection('afmacerp', 'amministratore_afmac', 'pw..', '5441')
+        import openupgrader
+        mig = openupgrader.Connection('db', 'amministratore_db', 'pw_db', '5435')
         mig.do_migration(from_version=[], to_version=[])
         mig.do_migration('8.0', '9.0', restore_db_update=True, filestore=True)
         mig.do_migration('9.0', '10.0', filestore=True)
@@ -389,6 +389,7 @@ class Connection:
                               venv_path, version, version)],
                              cwd=venv_path, shell=True).wait()
         commands = [
+            'bin/pip install "setuptools<58.0.0"',
             'bin/pip install -r odoo/requirements.txt',
             'cd odoo && ../bin/pip install -e . ',
         ]
