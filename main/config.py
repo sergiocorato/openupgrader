@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 import os
-import kaptan
+import yaml
 
 
 def load_config(config, version):
@@ -12,11 +12,11 @@ def load_config(config, version):
         else:
             config = local_path
 
-    file_extension = os.path.splitext(config)[1][1:]
-    conf = kaptan.Kaptan(handler=kaptan.HANDLER_EXT.get(file_extension))
-
-    conf.import_config(config)
-    repos = conf.export('dict') or {}
+    with open(config, "r") as stream:
+        try:
+            repos = yaml.safe_load(stream) or {}
+        except yaml.YAMLError as exc:
+            print(exc)
     res = {}
     for repo in repos.get('repositories'):
         if repo.get('version') == version:
@@ -33,9 +33,10 @@ def load_receipts(config):
         else:
             config = local_path
 
-    file_extension = os.path.splitext(config)[1][1:]
-    conf = kaptan.Kaptan(handler=kaptan.HANDLER_EXT.get(file_extension))
-
-    conf.import_config(config)
-    repos = conf.export('dict') or {}
+    with open(config, "r") as stream:
+        try:
+            repos = yaml.safe_load(stream) or {}
+        except yaml.YAMLError as exc:
+            print(exc)
     return repos
+
