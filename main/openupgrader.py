@@ -92,19 +92,19 @@ class Connection:
                        "--addons-path=" \
                        "%s" \
                        "%s/addons-extra" \
-                       "%s%s " \
+                       "%s " \
                        "--load=%s " % (
                         executable,
                         self.db_port, self.xmlrpc_port,
                         venv_path,
                         ("%s/odoo/addons," % venv_path if version in [
-                            '8.0', '9.0', '10.0', '11.0', '12.0', '13.0'] else ''),
+                            '8.0', '9.0', '10.0', '11.0', '12.0', '13.0'] else
+                         '%s/repos/odoo/addons,' % venv_path),
                         venv_path,
                         (',%s/odoo/odoo/addons' % venv_path if version in [
-                            '10.0', '11.0', '12.0', '13.0'] else ''),
-                        (',%s/openupgrade_scripts,%s/openupgrade_framework'
-                         % (venv_path, venv_path) if version not in [
-                            '8.0', '9.0', '10.0', '11.0', '12.0', '13.0'] else ''),
+                            '10.0', '11.0', '12.0', '13.0'] else
+                         ',%s/repos/odoo/odoo/addons,%s/odoo' % (
+                             venv_path, venv_path)),
                         load)
         cwd_path = '%s/' % venv_path
         if version != '7.0':
@@ -403,6 +403,8 @@ class Connection:
         commands = [
             'bin/pip install "setuptools<58.0.0"',
             'bin/pip install -r odoo/requirements.txt',
+            'bin/pip install -r repos/odoo/requirements.txt' if version not in [
+                '8.0', '9.0', '10.0', '11.0', '12.0', '13.0'] else '',
             'cd odoo && ../bin/pip install -e . ' if version in [
                 '8.0', '9.0', '10.0', '11.0', '12.0', '13.0'
             ] else 'cd repos/odoo && ../../bin/pip install -e . ',
