@@ -102,7 +102,7 @@ class Connection:
                         venv_path,
                         (',%s/odoo/odoo/addons' % venv_path if version in [
                             '10.0', '11.0', '12.0', '13.0'] else ''),
-                        (',%s/odoo/openupgrade_scripts,%s/odoo/openupgrade_framework'
+                        (',%s/openupgrade_scripts,%s/openupgrade_framework'
                          % (venv_path, venv_path) if version not in [
                             '8.0', '9.0', '10.0', '11.0', '12.0', '13.0'] else ''),
                         load)
