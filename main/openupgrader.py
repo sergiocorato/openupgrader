@@ -80,20 +80,31 @@ class Connection:
         load = 'web'
         if version == '10.0':
             load = 'web,web_kanban'
-        if version == '12.0':
+        if version in ['12.0', '13.0', '14.0']:
             load = 'base,web'
+        if version == '14.0' and update:
+            load = 'base,web,openupgrade_framework'
         executable = 'openerp-server' if version in ['7.0', '8.0', '9.0'] else 'odoo'
         bash_command = "bin/%s " \
                        "--db_port=%s --xmlrpc-port=%s " \
                        "--logfile=%s/migration.log " \
                        "--limit-time-cpu=600 --limit-time-real=1200 "\
                        "--addons-path=" \
-                       "%s/odoo/addons,%s/addons-extra%s " \
+                       "%s" \
+                       "%s/addons-extra" \
+                       "%s%s " \
                        "--load=%s " % (
-                        executable, self.db_port, self.xmlrpc_port, venv_path,
-                        venv_path, venv_path,
-                        (',%s/odoo/odoo/addons' % venv_path if version not in [
-                            '7.0', '8.0', '9.0'] else ''),
+                        executable,
+                        self.db_port, self.xmlrpc_port,
+                        venv_path,
+                        ("%s/odoo/addons," % venv_path if version in [
+                            '8.0', '9.0', '10.0', '11.0', '12.0', '13.0'] else ''),
+                        venv_path,
+                        (',%s/odoo/odoo/addons' % venv_path if version in [
+                            '10.0', '11.0', '12.0', '13.0'] else ''),
+                        (',%s/odoo/openupgrade_scripts,%s/odoo/openupgrade_framework'
+                         % (venv_path, venv_path) if version not in [
+                            '8.0', '9.0', '10.0', '11.0', '12.0', '13.0'] else ''),
                         load)
         cwd_path = '%s/' % venv_path
         if version != '7.0':
@@ -347,10 +358,11 @@ class Connection:
                            % (self.db_port, self.db, bash_command)]
                 subprocess.Popen(command, shell=True).wait()
             bash_update_commands = part.get('sql_update_commands', [])
-            for bash_update_command in bash_update_commands:
-                upd_command = ['psql -p %s -d %s -c "%s"'
-                               % (self.db_port, self.db, bash_update_command)]
-                subprocess.Popen(upd_command, shell=True).wait()
+            if bash_update_commands:
+                for bash_update_command in bash_update_commands:
+                    upd_command = ['psql -p %s -d %s -c "%s"'
+                                   % (self.db_port, self.db, bash_update_command)]
+                    subprocess.Popen(upd_command, shell=True).wait()
 
     def post_migration(self, version):
         # re-enable mail servers and clean db
@@ -391,7 +403,9 @@ class Connection:
         commands = [
             'bin/pip install "setuptools<58.0.0"',
             'bin/pip install -r odoo/requirements.txt',
-            'cd odoo && ../bin/pip install -e . ',
+            'cd odoo && ../bin/pip install -e . ' if version in [
+                '8.0', '9.0', '10.0', '11.0', '12.0', '13.0'
+            ] else 'cd repos/odoo && ../../bin/pip install -e . ',
         ]
         for command in commands:
             subprocess.Popen(command, cwd=venv_path, shell=True).wait()
