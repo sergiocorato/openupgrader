@@ -398,8 +398,8 @@ class Connection:
         else:
             subprocess.Popen(['cd %s/odoo && git reset --hard origin/%s && git pull '
                               '&& git reset --hard origin/%s' % (
-                              venv_path, version, version)],
-                             cwd=venv_path, shell=True).wait()
+                                  venv_path, version, version
+                              )], cwd=venv_path, shell=True).wait()
         commands = [
             'bin/pip install "setuptools<58.0.0"',
             'bin/pip install -r odoo/requirements.txt',
