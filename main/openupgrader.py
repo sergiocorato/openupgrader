@@ -191,7 +191,7 @@ class Connection:
             dump_file_sql = os.path.join(self.path, 'database.sql')
             if os.path.isfile(dump_file_sql):
                 subprocess.Popen([
-                    'gzip -c %s > %s.gz' % (
+                    'gzip -c %s > %s' % (
                         dump_file_sql, dump_file)
                 ], shell=True).wait()
         if os.path.isfile(dump_file):
