@@ -187,6 +187,13 @@ class Connection:
                 pg_bin_path, self.db_port, self.db)], shell=True)
         process.wait()
         dump_file = os.path.join(self.path, 'database.gz')
+        if not os.path.isfile(dump_file):
+            dump_file_sql = os.path.join(self.path, 'database.sql')
+            if os.path.isfile(dump_file_sql):
+                subprocess.Popen([
+                    'gzip -c %s > %s.gz' % (
+                        dump_file_sql, dump_file)
+                ], shell=True).wait()
         if os.path.isfile(dump_file):
             process = subprocess.Popen(
                 ['mv %s %s/database.%s.gz' % (
