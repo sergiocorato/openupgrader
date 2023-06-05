@@ -194,6 +194,7 @@ class Connection:
                     'gzip -c %s > %s' % (
                         dump_file_sql, dump_file)
                 ], shell=True).wait()
+                os.unlink(dump_file_sql)
         if os.path.isfile(dump_file):
             process = subprocess.Popen(
                 ['mv %s %s/database.%s.gz' % (
