@@ -80,10 +80,12 @@ class Connection:
         load = 'web'
         if version == '10.0':
             load = 'web,web_kanban'
-        if version in ['12.0', '13.0', '14.0']:
+        if version not in ['7.0', '8.0', '9.0', '10.0', '11.0']:
             load = 'base,web'
-        if version == '14.0' and update:
-            load = 'base,web,openupgrade_framework'
+        if version not in [
+            '7.0', '8.0', '9.0', '10.0', '11.0', '12.0', '13.0'
+        ] and update:
+            load += ',openupgrade_framework'
         executable = 'openerp-server' if version in ['7.0', '8.0', '9.0'] else 'odoo'
         bash_command = "bin/%s " \
                        "--db_port=%s --xmlrpc-port=%s " \
