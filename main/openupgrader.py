@@ -3,6 +3,7 @@
 # License LGPL-3.0 or later (http://www.gnu.org/licenses/lgpl.html).
 
 import odooly
+import shutil
 import subprocess
 import time
 import os
@@ -67,11 +68,12 @@ class Connection:
         )
         time.sleep(5)
 
-    def start_odoo(self, version, update=False, migrate=True):
+    def start_odoo(self, version, update=False, migrate=True, extra_command='', save=False):
         """
         :param version: odoo version to start (8.0, 9.0, 10.0, ...)
         :param update: if True odoo will be updated with -u all and stopped
         :param migrate: if True start odoo with openupgrade repo
+        :param extra_command: command that will be passed after executable
         :return: odoo instance in self.client if not updated, else nothing
         """
         venv_path = '%s/%s%s' % (
@@ -87,32 +89,29 @@ class Connection:
         ] and update:
             load += ',openupgrade_framework'
         executable = 'openerp-server' if version in ['7.0', '8.0', '9.0'] else 'odoo'
-        bash_command = "bin/%s " \
-                       "--db_port=%s --xmlrpc-port=%s " \
-                       "--logfile=%s/migration.log " \
-                       "--limit-time-cpu=600 --limit-time-real=1200 "\
-                       "--addons-path=" \
-                       "%s" \
-                       "%s/addons-extra" \
+        bash_command = f"bin/{executable} " \
+                       f"--addons-path=%s" \
+                       f"{venv_path}/addons-extra" \
                        "%s " \
-                       "--load=%s " % (
-                        executable,
-                        self.db_port, self.xmlrpc_port,
-                        venv_path,
-                        ("%s/odoo/addons," % venv_path if version in [
+                       f"{extra_command} " \
+                       f"--db_port={self.db_port} --xmlrpc-port={self.xmlrpc_port} " \
+                       f"--logfile={venv_path}/migration.log " \
+                       "--limit-time-cpu=600 --limit-time-real=1200 "\
+                       f"--load={load} " % (
+                        (f"{venv_path}/odoo/addons," if version in [
                             '8.0', '9.0', '10.0', '11.0', '12.0', '13.0'] else
-                         '%s/repos/odoo/addons,' % venv_path),
-                        venv_path,
-                        (',%s/odoo/odoo/addons' % venv_path if version in [
+                         f'{venv_path}/repos/odoo/addons,'),
+                        (f',{venv_path}/odoo/odoo/addons' if version in [
                             '10.0', '11.0', '12.0', '13.0'] else
-                         ',%s/repos/odoo/odoo/addons,%s/odoo' % (
-                             venv_path, venv_path)),
-                        load)
+                         f',{venv_path}/repos/odoo/odoo/addons,{venv_path}/odoo'),
+                        )
         cwd_path = '%s/' % venv_path
         if version != '7.0':
             bash_command += "--data-dir=%s/data_dir " % venv_path
         if update:
             bash_command += " -u all -d %s --stop-after-init" % self.db
+        if save:
+            bash_command += " -s --stop"
         process = subprocess.Popen(
             bash_command.split(), stdout=subprocess.PIPE, cwd=cwd_path)
         self.pid = process.pid
@@ -120,13 +119,15 @@ class Connection:
             process.wait()
         else:
             time.sleep(15)
-            self.odoo_connect()
+            if not extra_command and not save:
+                self.odoo_connect()
         time.sleep(5)
 
     def stop_odoo(self):
         if self.pid:
             os.kill(self.pid, signal.SIGTERM)
-            time.sleep(5)
+            time.sleep(10)
+            os.kill(self.pid, signal.SIGTERM)
 
     def disable_mail(self, disable=False):
         state = 'draft' if disable else 'done'
@@ -151,23 +152,31 @@ class Connection:
         process.wait()
 
     def restore_filestore(self, from_version, to_version):
-        dump_file = os.path.join(self.path, 'filestore.tar')
-        if os.path.isfile(dump_file):
-            process = subprocess.Popen(
-                ['mv %s %s/filestore.%s.tar' % (
-                    dump_file, self.venv_path, from_version)], shell=True)
-            process.wait()
-        dump_file = os.path.join(
-            self.venv_path, 'filestore.%s.tar' % from_version)
-        filestore_path = '%s/openupgrade%s/data_dir/filestore' % (
-            self.venv_path, to_version)
+        filestore_path = os.path.join(
+            self.venv_path, f'openupgrade{to_version}', 'data_dir', 'filestore'
+        )
         if not os.path.isdir(filestore_path):
+            os.mkdir(filestore_path)
+        dump_folder = os.path.join(self.path, 'filestore')
+        dump_file = os.path.join(self.path, 'filestore.tar')
+        if os.path.isdir(dump_folder):
             process = subprocess.Popen([
-                'mkdir -p %s' % filestore_path], shell=True)
+                f'tar -zcvf {self.venv_path}/filestore.{from_version}.tar filestore'
+            ], shell=True, cwd=self.path)
             process.wait()
+            shutil.rmtree(dump_folder)
+        elif os.path.isfile(dump_file):
+            os.rename(dump_file, f'{self.venv_path}/filestore.{from_version}.tar')
+        dump_file = os.path.join(
+            self.venv_path, f'filestore.{from_version}.tar')
+        filestore_db_path = os.path.join(
+            filestore_path, self.db
+        )
+        if not os.path.isdir(filestore_db_path):
+            os.mkdir(filestore_db_path)
         process = subprocess.Popen([
-            'tar -zxvf %s -C %s/openupgrade%s/data_dir/filestore/' % (
-                dump_file, self.venv_path, to_version)], shell=True)
+            f'tar -zxvf {dump_file} --strip-components=1 -C {filestore_db_path}/'
+        ], shell=True)
         process.wait()
 
     def dump_filestore(self, version):
@@ -247,8 +256,8 @@ class Connection:
             self.migrate_bank_riba_id_bank_ids(from_version)
             self.migrate_bank_riba_id_bank_ids_invoice(from_version)
         self.start_odoo(to_version, update=True)
-        self.auto_install_modules(to_version)
         self.uninstall_modules(to_version, after_migration=True)
+        self.auto_install_modules(to_version)
         self.sql_fixes(self.receipts[to_version])
         if to_version == '10.0':
             self.start_odoo(to_version)
@@ -261,6 +270,8 @@ class Connection:
             self.dump_filestore(to_version)
         if to_version in ['10.0', '11.0', '12.0']:
             requirements.create_pip_requirements(self, to_version)
+        if to_version == '14.0':
+            self.migrate_l10n_it_ddt_to_l10n_it_delivery_note(to_version)
 
     def fix_taxes(self, version):
         # correzione da fare sulle imposte prima della migrazione alla v.11.0 altrimenti
@@ -359,6 +370,20 @@ class Connection:
                     'partner_bank_id': new_partner_bank.id,
                 })
         self.stop_odoo()
+
+    def migrate_l10n_it_ddt_to_l10n_it_delivery_note(self, version):
+        self.start_odoo(version)
+        if self.client.env['ir.module.module'].search([
+            ('name', '=', 'l10n_it_ddt'),
+            ('state', '=', 'installed'),
+        ]):
+            self.install_uninstall_module(
+                'l10n_it_delivery_note', install=True
+            )
+            self.stop_odoo()
+            self.start_odoo(version=version,
+                            extra_command=f'migratel10nitddt -d {self.db}')
+            self.stop_odoo()
 
     def sql_fixes(self, receipt):
         for part in receipt:
