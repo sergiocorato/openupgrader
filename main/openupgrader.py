@@ -383,7 +383,6 @@ class Connection:
             self.stop_odoo()
             self.start_odoo(version=version,
                             extra_command=f'migrate_l10n_it_ddt -d {self.db}')
-            self.stop_odoo()
 
     def sql_fixes(self, receipt):
         for part in receipt:
