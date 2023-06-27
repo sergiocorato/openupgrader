@@ -255,6 +255,8 @@ class Connection:
         if to_version == '12.0' and 'mac' in self.db:
             self.migrate_bank_riba_id_bank_ids(from_version)
             self.migrate_bank_riba_id_bank_ids_invoice(from_version)
+        if from_version == '12.0':
+            self.migrate_l10n_it_ddt_to_l10n_it_delivery_note(from_version)
         self.start_odoo(to_version, update=True)
         self.uninstall_modules(to_version, after_migration=True)
         self.auto_install_modules(to_version)
@@ -270,8 +272,6 @@ class Connection:
             self.dump_filestore(to_version)
         if to_version in ['10.0', '11.0', '12.0']:
             requirements.create_pip_requirements(self, to_version)
-        if to_version == '14.0':
-            self.migrate_l10n_it_ddt_to_l10n_it_delivery_note(to_version)
 
     def fix_taxes(self, version):
         # correzione da fare sulle imposte prima della migrazione alla v.11.0 altrimenti
@@ -382,7 +382,7 @@ class Connection:
             )
             self.stop_odoo()
             self.start_odoo(version=version,
-                            extra_command=f'migratel10nitddt -d {self.db}')
+                            extra_command=f'migrate_l10n_it_ddt -d {self.db}')
             self.stop_odoo()
 
     def sql_fixes(self, receipt):
