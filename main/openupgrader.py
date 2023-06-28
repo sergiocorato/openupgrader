@@ -9,7 +9,7 @@ import time
 import os
 import signal
 from main import config
-from main import requirements
+from main import openupgrade_fixes
 
 
 class Connection:
@@ -58,6 +58,7 @@ class Connection:
         self.pg_bin_path = '/usr/lib/postgresql/11/bin/' if self.db_port in [
             '5439', '5440', '5441'] else ''
         self.receipts = config.load_receipts('openupgrade_config.yml')
+        self.fixes = openupgrade_fixes.Fixes()
 
     def odoo_connect(self):
         self.client = odooly.Client(
@@ -221,7 +222,8 @@ class Connection:
 
     # MASTER function #####
     def do_migration(self, from_version, to_version, restore_db_update=False,
-                     restore_db_only=False, filestore=False, create_venv=True):
+                     restore_db_only=False, filestore=False, create_venv=True,
+                     fix_banks=False):
         to_branch = to_version if len(to_version) > 4 else False
         to_version = to_version[:4]
         if create_venv:
@@ -252,9 +254,9 @@ class Connection:
         self.delete_old_modules(from_version)
         if to_version == '11.0':
             self.fix_taxes(from_version)
-        if to_version == '12.0' and 'mac' in self.db:
-            self.migrate_bank_riba_id_bank_ids(from_version)
-            self.migrate_bank_riba_id_bank_ids_invoice(from_version)
+        if to_version == '12.0' and fix_banks:
+            self.fixes.migrate_bank_riba_id_bank_ids(from_version)
+            self.fixes.migrate_bank_riba_id_bank_ids_invoice(from_version)
         if from_version == '12.0':
             self.migrate_l10n_it_ddt_to_l10n_it_delivery_note(from_version)
         self.start_odoo(to_version, update=True)
@@ -290,83 +292,6 @@ class Connection:
                     child_tax.amount = tax.amount * child_tax.amount
                 first_child_amount = child_tax.amount
                 print('Fixed child tax %s' % child_tax.name)
-        self.stop_odoo()
-
-    def migrate_bank_riba_id_bank_ids(self, version):
-        self.start_odoo(version)
-        partners = self.client.env['res.partner'].search([
-            ('bank_riba_id', '!=', False)
-        ])
-        for partner in partners:
-            bank_found = False
-            if partner.bank_ids:
-                for bank in partner.bank_ids:
-                    bank.sequence = 10
-                for bank in partner.bank_ids:
-                    if bank.bank_abi == partner.bank_riba_id.abi and \
-                            bank.bank_cab == partner.bank_riba_id.cab:
-                        bank_found = True
-                        bank.sequence = 0
-                        print('La banca è corretta per il partner %s' % partner.name)
-                        break
-            if not bank_found:
-                print('Creata banca mancante per il partner %s' % partner.name)
-                partner.write({
-                    'bank_ids': [(0, 0, {
-                        'sequence': 0,
-                        'acc_number': ''.join([str(partner.id),
-                                               str(partner.bank_riba_id.abi),
-                                               str(partner.bank_riba_id.cab),
-                                               partner.bank_riba_id.name[:10]]),
-                        'bank_id': partner.bank_riba_id.id,
-                        'bank_abi': partner.bank_riba_id.abi,
-                        'bank_cab': partner.bank_riba_id.cab,
-                    })]
-                })
-        self.stop_odoo()
-
-    def migrate_bank_riba_id_bank_ids_invoice(self, version):
-        self.start_odoo(version)
-        invoices = self.client.env['account.invoice'].search([
-            ('bank_riba_id', '!=', False)
-        ])
-        for invoice in invoices:
-            # trovo con abi e cab di bank_riba_id la res.partner.bank corretta
-            partner_bank = self.client.env['res.partner.bank'].search([
-                ('bank_abi', '=', invoice.bank_riba_id.abi),
-                ('bank_cab', '=', invoice.bank_riba_id.cab),
-                ('partner_id', '=', invoice.partner_id.id),
-            ])
-            if partner_bank:
-                partner_bank = partner_bank[0]
-                if invoice.partner_bank_id \
-                        and invoice.partner_bank_id.bank_abi == partner_bank.bank_abi \
-                        and invoice.partner_bank_id.bank_cab == partner_bank.bank_cab:
-                    print('La banca è corretta per la fattura %s' % invoice.number)
-                else:
-                    print('Banca aggiornata in fattura %s da %s a %s' % (
-                        invoice.number,
-                        invoice.partner_bank_id and invoice.partner_bank_id.acc_number or '',
-                        partner_bank.acc_number))
-                    invoice.write({
-                        'partner_bank_id': partner_bank.id,
-                    })
-            else:
-                print('Banca non trovata per fattura %s' % invoice.number)
-                new_partner_bank = self.client.env['res.partner.bank'].create({
-                    'sequence': 0,
-                    'partner_id': invoice.partner_id.id,
-                    'acc_number': ''.join([str(invoice.partner_id.id),
-                                           str(invoice.bank_riba_id.abi),
-                                           str(invoice.bank_riba_id.cab),
-                                           invoice.bank_riba_id.name[:10]]),
-                    'bank_id': invoice.bank_riba_id.id,
-                    'bank_abi': invoice.bank_riba_id.abi,
-                    'bank_cab': invoice.bank_riba_id.cab,
-                })
-                invoice.write({
-                    'partner_bank_id': new_partner_bank.id,
-                })
         self.stop_odoo()
 
     def migrate_l10n_it_ddt_to_l10n_it_delivery_note(self, version):
