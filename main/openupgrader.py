@@ -270,8 +270,6 @@ class Connection:
         self.dump_database(to_version)
         if filestore:
             self.dump_filestore(to_version)
-        if to_version in ['10.0', '11.0', '12.0']:
-            requirements.create_pip_requirements(self, to_version)
 
     def fix_taxes(self, version):
         # correzione da fare sulle imposte prima della migrazione alla v.11.0 altrimenti
