@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Copyright 2019 Sergio Corato <https://github.com/sergiocorato>
 # License LGPL-3.0 or later (http://www.gnu.org/licenses/lgpl.html).
 
@@ -16,7 +15,6 @@ class Fixes:
     #  ovviamente corretta con la nuova configurazione (padre-figlie)
     # todo dopo il ripristino del db e del filestore:
     #  ripristinare filtri disabilitati perche invalidi
-
 
     def migrate_bank_riba_id_bank_ids(self, version):
         self.start_odoo(version)
@@ -126,21 +124,6 @@ class Fixes:
                        % (self.db_port, self.db, bash_command)]
             process = subprocess.Popen(command, shell=True)
             process.wait()
-
-    # def update_auto_create_task(self):
-    #     # todo if want to use this, would have to map the task related and
-    #     # write them inside sale order line to work correctly
-    #     bash_commands = [
-    #         'update product_template set auto_create_task = true where type '
-    #         ' = \'service\' and uom_id in (select id from product_uom where '
-    #         'category_id in (select id from product_uom_categ where name ilike'
-    #         ' \'%Working%\'));',
-    #     ]
-    #     for bash_command in bash_commands:
-    #         command = ['psql -U sergio -p %s -d %s -c "%s"'
-    #                    % (self.db_port, self.db, bash_command)]
-    #         process = subprocess.Popen(command, shell=True)
-    #         process.wait()
 
     def update_analitic_sal(self):
         bash_commands = [
