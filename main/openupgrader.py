@@ -36,7 +36,8 @@ class Connection:
         e lanciare con
         import openupgrader
         mig = openupgrader.Connection('db', 'amministratore_db', 'pw_db', '5435')
-        mig.init_migration(from_version=8.0, to_version=9.0, restore_db_update=True, filestore=True)
+        mig.init_migration(from_version=8.0, to_version=9.0, restore_db_update=True,
+         filestore=True)
         in seguito lanciare i comandi seguenti ripetutamente per ogni versione
         mig.prepare_migration()
         mig.do_migration()
@@ -91,13 +92,15 @@ class Connection:
         )
         time.sleep(5)
 
-    def start_odoo(self, version, update=False, migrate=True, extra_command='', save=False):
+    def start_odoo(self, version, update=False, migrate=True, extra_command='',
+                   save=False):
         """
         :param version: odoo version to start (8.0, 9.0, 10.0, ...)
         :param update: if True odoo will be updated with -u all and stopped
         :param migrate: if True start odoo with openupgrade repo
         :param extra_command: command that will be passed after executable
-        :return: odoo instance in self.client if not updated, else nothing
+        :param save: if True save .odoorc
+        :return: Odoo instance in "self.client" if not updated, else nothing
         """
         venv_path = '%s/%s%s' % (
             self.venv_path, 'openupgrade' if migrate else 'standard',
@@ -138,11 +141,11 @@ class Connection:
         process = subprocess.Popen(
             bash_command.split(), stdout=subprocess.PIPE, cwd=cwd_path)
         self.pid = process.pid
-        if update:
+        if update or extra_command:
             process.wait()
         else:
             time.sleep(15)
-            if not extra_command and not save:
+            if not save:
                 self.odoo_connect()
         time.sleep(5)
 
@@ -355,6 +358,7 @@ class Connection:
             self.stop_odoo()
             self.start_odoo(version=version,
                             extra_command=f'migrate_l10n_it_ddt -d {self.db}')
+            self.stop_odoo()
 
     def sql_fixes(self, receipt):
         for part in receipt:
@@ -450,13 +454,13 @@ class Connection:
                     repo_version)
             ], cwd=venv_path, shell=True)
             process.wait()
-            # copy modules to create an unique addons path
+            # copy modules to create a unique addons path
             for root, dirs, files in os.walk(
                     '%s/repos/%s/' % (venv_path, repo_name)):
                 for d in dirs:
                     if d not in ['.git', 'setup']:
                         process = subprocess.Popen([
-                            "cp -rf %s/repos/%s/%s %s/addons-extra/" %(
+                            "cp -rf %s/repos/%s/%s %s/addons-extra/" % (
                                 venv_path, repo_name, d,
                                 venv_path)
                         ], cwd=venv_path, shell=True)
