@@ -11,6 +11,18 @@ import signal
 from main import config
 from main import openupgrade_fixes
 
+versions = {
+    '7.0': '8.0',
+    '8.0': '9.0',
+    '9.0': '10.0',
+    '10.0': '11.0',
+    '11.0': '12.0',
+    '12.0': '13.0',
+    '13.0': '14.0',
+    '14.0': '15.0',
+    '15.0': '16.0',
+}
+
 
 class Connection:
     def __init__(self, db, user, password, db_port='5432'):
@@ -19,16 +31,18 @@ class Connection:
         copiare nella cartella ~ i file:
         database.gz [file creato con pg_dump [database] | gzip > database.gz
         e filestore.tar [file creato con tar -cvzf filestore.tar ./filestore
+        oppure
+        database.sql e cartella del filestore [estratti da auto_backup]
         e lanciare con
         import openupgrader
         mig = openupgrader.Connection('db', 'amministratore_db', 'pw_db', '5435')
-        mig.do_migration(from_version=[], to_version=[])
-        mig.do_migration('8.0', '9.0', restore_db_update=True, filestore=True)
-        mig.do_migration('9.0', '10.0', filestore=True)
-        mig.do_migration('10.0', '11.0', filestore=True)
-        mig.do_migration('11.0', '12.0', filestore=True)
-        n.b.: per il momento è supportata solo la migrazione di 1 versione per
-        volta
+        mig.init_migration(from_version=8.0, to_version=9.0, restore_db_update=True, filestore=True)
+        in seguito lanciare i comandi seguenti ripetutamente per ogni versione
+        mig.prepare_migration()
+        mig.do_migration()
+        oppure
+        mig.prepare_do_migration()
+        n.b.: per il momento è supportata solo la migrazione di 1 versione per volta
         :param db: il database da migrare (il nuovo nome)
         :param user: l'utente amministrativo
         :param password: la password dell'utente amministrativo
@@ -59,6 +73,14 @@ class Connection:
             '5439', '5440', '5441'] else ''
         self.receipts = config.load_receipts('openupgrade_config.yml')
         self.fixes = openupgrade_fixes.Fixes()
+        self.from_version = False
+        self.to_branch = False
+        self.to_version = False
+        self.restore_db_update = False
+        self.restore_db_only = False
+        self.create_venv = False
+        self.filestore = False
+        self.fix_banks = False
 
     def odoo_connect(self):
         self.client = odooly.Client(
@@ -221,37 +243,59 @@ class Connection:
         process.wait()
 
     # MASTER function #####
-    def do_migration(self, from_version, to_version, restore_db_update=False,
-                     restore_db_only=False, filestore=False, create_venv=True,
-                     fix_banks=False):
-        to_branch = to_version if len(to_version) > 4 else False
-        to_version = to_version[:4]
-        if create_venv:
-            self.create_venv_git_version(to_version, to_branch, openupgrade=True)
+    def init_migration(self, from_version, to_version, restore_db_update=False,
+                       restore_db_only=False, filestore=False, create_venv=True,
+                       fix_banks=False):
+        self.from_version = from_version
+        self.to_branch = to_version if len(to_version) > 4 else False
+        self.to_version = to_version[:4]
+        self.restore_db_update = restore_db_update
+        self.restore_db_only = restore_db_only
+        self.create_venv = create_venv
+        self.filestore = filestore
+        self.fix_banks = fix_banks
+
+    def prepare_do_migration(self):
+        self.prepare_migration()
+        self.do_migration()
+
+    def prepare_migration(self):
+        to_version = self.to_version
+        from_version = self.from_version
+        if self.create_venv:
+            self.create_venv_git_version(to_version, self.to_branch, openupgrade=True)
+            self.to_branch = False
         # FIXME NB.: Per i test di migrazione alla 10.0 rimosso il compute da
         #  /tmp_venv/openupgrade10.0/odoo/addons/product/models$ cat product_template.py
         #  altrimenti ci mette ore
         # self.create_venv_git_version(from_version, openupgrade=True)
-        if restore_db_update:
+        if self.restore_db_update:
             # STEP1: create venv for current version to fix it
             self.create_venv_git_version(from_version, openupgrade=True)
-            if filestore:
+            if self.filestore:
                 self.restore_filestore(from_version, from_version)
             self.restore_db(from_version)
             self.disable_mail(disable=True)
             # n.b. when updating, at the end odoo service is stopped
             self.start_odoo(from_version, update=True)
+            self.restore_db_update = False
         # restore db if not restored before, not needed if migration for more version
-        elif restore_db_only:
+        elif self.restore_db_only:
             self.restore_db(from_version)
-        if filestore:
+            self.restore_db_only = False
+        if self.filestore:
             self.restore_filestore(from_version, to_version)
         self.disable_mail(disable=True)
         self.sql_fixes(self.receipts[from_version])
-        # DO MIGRATION to next version ###
         self.auto_install_modules(from_version)
         self.uninstall_modules(from_version, before_migration=True)
         self.delete_old_modules(from_version)
+
+    def do_migration(self):
+        to_version = self.to_version
+        from_version = self.from_version
+        filestore = self.filestore
+        fix_banks = self.fix_banks
         if to_version == '11.0':
             self.fix_taxes(from_version)
         if to_version == '12.0' and fix_banks:
@@ -272,6 +316,11 @@ class Connection:
         self.dump_database(to_version)
         if filestore:
             self.dump_filestore(to_version)
+        print(f"Migration done from version {from_version} to version {to_version}")
+        if self.from_version in versions:
+            self.from_version = self.to_version
+            self.to_version = versions[self.from_version]
+            print(f"Set next version to {self.to_version}")
 
     def fix_taxes(self, version):
         # correzione da fare sulle imposte prima della migrazione alla v.11.0 altrimenti
