@@ -266,15 +266,15 @@ class Connection:
         to_version = self.to_version
         from_version = self.from_version
         if self.create_venv:
-            self.create_venv_git_version(to_version, self.to_branch, openupgrade=True)
+            self.create_venv_git_version(to_version, self.to_branch)
             self.to_branch = False
         # FIXME NB.: Per i test di migrazione alla 10.0 rimosso il compute da
         #  /tmp_venv/openupgrade10.0/odoo/addons/product/models$ cat product_template.py
         #  altrimenti ci mette ore
-        # self.create_venv_git_version(from_version, openupgrade=True)
+        # self.create_venv_git_version(from_version)
         if self.restore_db_update:
             # STEP1: create venv for current version to fix it
-            self.create_venv_git_version(from_version, openupgrade=True)
+            self.create_venv_git_version(from_version)
             if self.filestore:
                 self.restore_filestore(from_version, from_version)
             self.restore_db(from_version)
@@ -358,7 +358,6 @@ class Connection:
             self.stop_odoo()
             self.start_odoo(version=version,
                             extra_command=f'migrate_l10n_it_ddt -d {self.db}')
-            self.stop_odoo()
 
     def sql_fixes(self, receipt):
         for part in receipt:
@@ -379,7 +378,7 @@ class Connection:
         self.disable_mail(disable=False)
         self.database_cleanup(version)
 
-    def create_venv_git_version(self, version, branch=False, openupgrade=False):
+    def create_venv_git_version(self, version, branch=False, openupgrade=True):
         venv_path = '%s/%s%s' % (
             self.venv_path, 'openupgrade' if openupgrade else 'standard',
             version)
