@@ -82,6 +82,7 @@ class Connection:
         self.create_venv = False
         self.filestore = False
         self.fix_banks = False
+        self.migrate_ddt = False
 
     def odoo_connect(self):
         self.client = odooly.Client(
@@ -249,7 +250,7 @@ class Connection:
     # MASTER function #####
     def init_migration(self, from_version, to_version, restore_db_update=False,
                        restore_db_only=False, filestore=False, create_venv=True,
-                       fix_banks=False):
+                       fix_banks=False, migrate_ddt=False):
         self.from_version = from_version
         self.to_branch = to_version if len(to_version) > 4 else False
         self.to_version = to_version[:4]
@@ -258,6 +259,7 @@ class Connection:
         self.create_venv = create_venv
         self.filestore = filestore
         self.fix_banks = fix_banks
+        self.migrate_ddt = migrate_ddt
 
     def prepare_do_migration(self):
         self.prepare_migration()
@@ -298,14 +300,12 @@ class Connection:
     def do_migration(self):
         to_version = self.to_version
         from_version = self.from_version
-        filestore = self.filestore
-        fix_banks = self.fix_banks
         if to_version == '11.0':
             self.fix_taxes(from_version)
-        if to_version == '12.0' and fix_banks:
+        if to_version == '12.0' and self.fix_banks:
             self.fixes.migrate_bank_riba_id_bank_ids(from_version)
             self.fixes.migrate_bank_riba_id_bank_ids_invoice(from_version)
-        if from_version == '12.0':
+        if from_version == '12.0' and self.migrate_ddt:
             self.migrate_l10n_it_ddt_to_l10n_it_delivery_note(from_version)
         self.start_odoo(to_version, update=True)
         self.uninstall_modules(to_version, after_migration=True)
@@ -318,7 +318,7 @@ class Connection:
             self.install_uninstall_module('l10n_it_intrastat')
             self.stop_odoo()
         self.dump_database(to_version)
-        if filestore:
+        if self.filestore:
             self.dump_filestore(to_version)
         print(f"Migration done from version {from_version} to version {to_version}")
         if self.from_version in versions:
