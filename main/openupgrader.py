@@ -384,9 +384,7 @@ class Connection:
             version)
         py_version = '2.7' if version in ['7.0', '8.0', '9.0', '10.0'] \
             else '3.5' if version == '11.0' else '3.7'
-        odoo_repo = 'https://github.com/OCA/OCB.git'
-        if openupgrade:
-            odoo_repo = 'https://github.com/sergiocorato/OpenUpgrade.git'
+        odoo_repo = 'https://github.com/sergiocorato/OpenUpgrade.git'
         if not os.path.isdir(venv_path):
             subprocess.Popen(['mkdir -p %s' % venv_path], shell=True).wait()
             # do not recreate virtualenv as it regenerate file with bug in split()
