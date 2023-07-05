@@ -92,18 +92,19 @@ class Connection:
         )
         time.sleep(5)
 
-    def start_odoo(self, version, update=False, migrate=True, extra_command='',
-                   save=False):
+    def start_odoo(self, version, update=False, openupgrade_folder=True,
+                   extra_command='', save=False):
         """
         :param version: odoo version to start (8.0, 9.0, 10.0, ...)
         :param update: if True odoo will be updated with -u all and stopped
-        :param migrate: if True start odoo with openupgrade repo
+        :param openupgrade_folder: if True create odoo in a folder openupgrade, else
+         standard
         :param extra_command: command that will be passed after executable
         :param save: if True save .odoorc
         :return: Odoo instance in "self.client" if not updated, else nothing
         """
         venv_path = '%s/%s%s' % (
-            self.venv_path, 'openupgrade' if migrate else 'standard',
+            self.venv_path, 'openupgrade' if openupgrade_folder else 'standard',
             version)
         load = 'web'
         if version == '10.0':
