@@ -293,7 +293,6 @@ class Connection:
             self.restore_filestore(from_version, to_version)
         self.disable_mail(disable=True)
         self.sql_fixes(self.receipts[from_version])
-        self.auto_install_modules(from_version)
         self.uninstall_modules(from_version, before_migration=True)
         self.delete_old_modules(from_version)
 
