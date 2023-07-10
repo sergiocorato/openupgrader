@@ -144,7 +144,7 @@ class Connection:
         if version != '7.0':
             bash_command += "--data-dir=%s/data_dir " % venv_path
         if update:
-            bash_command += " -u all -d %s --stop-after-init" % self.db
+            bash_command += " -u all -d %s --stop" % self.db
         if save:
             bash_command += " -s --stop"
         process = subprocess.Popen(
