@@ -128,8 +128,7 @@ class Connection:
             addons_path = f"{venv_path}/odoo/addons,"
         extra_addons_path = \
             f',{venv_path}/repos/odoo/odoo/addons,{venv_path}/odoo'
-        if version in [
-                '10.0', '11.0', '12.0', '13.0']:
+        if version in ['10.0', '11.0', '12.0', '13.0']:
             extra_addons_path = f',{venv_path}/odoo/odoo/addons'
         bash_command = \
             f"bin/{executable} " \
