@@ -114,10 +114,17 @@ class Connection:
             load = 'base,web'
         if version not in [
             '7.0', '8.0', '9.0', '10.0', '11.0', '12.0', '13.0'
-        ] and update:
-            load += ',openupgrade_framework'
-        executable = 'openerp-server' if version in ['7.0', '8.0', '9.0'] else 'odoo'
+        ] and (update or save):
+            load += ',openupgrade_framework,module_change_auto_install'
+        executable = 'openerp-server' if version in ['7.0', '8.0', '9.0']\
+            else 'odoo'
+        odoorc_exist = bool(
+            os.path.isfile(
+                os.path.join(venv_path, '.odoorc')
+            )
+        )
         bash_command = f"bin/{executable} " \
+                       f"{'-c .odoorc' if odoorc_exist else ''} " \
                        f"--addons-path=%s" \
                        f"{venv_path}/addons-extra" \
                        "%s " \
@@ -149,6 +156,16 @@ class Connection:
             time.sleep(15)
             if not save:
                 self.odoo_connect()
+            else:
+                modules_to_not_install = \
+                    "modules_auto_install_disabled = partner_autocomplete,iap,mail_bot,account_edi,account_edi_facturx,account_edi_ubl,l10n_it_edi,l10n_it_edi_sdicoop"
+                subprocess.Popen(
+                    ['mv ~/.odoorc ./'], shell=True, cwd=cwd_path
+                ).wait()
+                subprocess.Popen(
+                    [f'sed -i "s/^osv_memory_age_limit.*/{modules_to_not_install}/g" .odoorc'],
+                    shell=True, cwd=cwd_path
+                ).wait()
         time.sleep(5)
 
     def stop_odoo(self):
