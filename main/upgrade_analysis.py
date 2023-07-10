@@ -30,10 +30,38 @@ class UpgradeAnalysis:
      u.init_odoo_istance()
      u.start_odoo()
     """
-    def __init__(self, version, module):
+    def __init__(self, version, modules=False):
         self.db = 'upgrade'
         self.version = version
-        self.module = module
+        if not modules:
+            modules_list = [
+                "account_vat_period_end_statement",
+                "l10n_it_abicab",
+                "l10n_it_account",
+                "l10n_it_account_stamp",
+                "l10n_it_account_tax_kind",
+                "l10n_it_appointment_code",
+                "l10n_it_ateco",
+                "l10n_it_declaration_of_intent",
+                "l10n_it_delivery_note",
+                "l10n_it_delivery_note_base",
+                "l10n_it_fatturapa",
+                "l10n_it_fatturapa_in",
+                "l10n_it_fatturapa_out",
+                "l10n_it_fiscal_document_type",
+                "l10n_it_fiscal_payment_term",
+                "l10n_it_fiscalcode",
+                "l10n_it_ipa",
+                "l10n_it_payment_reason",
+                "l10n_it_pec",
+                "l10n_it_rea",
+                "l10n_it_vat_payability",
+                "l10n_it_website_portal_ipa",
+                "l10n_it_withholding_tax",
+                "l10n_it_withholding_tax_reason"
+            ]
+            modules = ",".join(modules_list)
+        self.modules = modules
         self.upgrade_module = 'upgrade_analysis'
         # < 13.0 are not supported
         # if version == '12.0':
@@ -58,6 +86,6 @@ class UpgradeAnalysis:
         self.connection.start_odoo(
             version=self.version,
             openupgrade_folder=False,
-            extra_command=f'-d {self.db} -i base,{self.upgrade_module},{self.module} '
+            extra_command=f'-d {self.db} -i base,{self.upgrade_module},{self.modules} '
                           f'--without-demo=ALL'
         )
