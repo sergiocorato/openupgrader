@@ -123,23 +123,24 @@ class Connection:
                 os.path.join(venv_path, '.odoorc')
             )
         )
-        bash_command = f"bin/{executable} " \
-                       f"{'-c .odoorc' if odoorc_exist else ''} " \
-                       f"--addons-path=%s" \
-                       f"{venv_path}/addons-extra" \
-                       "%s " \
-                       f"{extra_command} " \
-                       f"--db_port={self.db_port} --xmlrpc-port={self.xmlrpc_port} " \
-                       f"--logfile={venv_path}/migration.log " \
-                       "--limit-time-cpu=600 --limit-time-real=1200 "\
-                       f"--load={load} " % (
-                        (f"{venv_path}/odoo/addons," if version in [
-                            '8.0', '9.0', '10.0', '11.0', '12.0', '13.0'] else
-                         f'{venv_path}/repos/odoo/addons,'),
-                        (f',{venv_path}/odoo/odoo/addons' if version in [
-                            '10.0', '11.0', '12.0', '13.0'] else
-                         f',{venv_path}/repos/odoo/odoo/addons,{venv_path}/odoo'),
-                        )
+        addons_path = f'{venv_path}/repos/odoo/addons,'
+        if version in ['8.0', '9.0', '10.0', '11.0', '12.0', '13.0']:
+            addons_path = f"{venv_path}/odoo/addons,"
+        extra_addons_path = \
+            f',{venv_path}/repos/odoo/odoo/addons,{venv_path}/odoo'
+        if version in [
+                '10.0', '11.0', '12.0', '13.0']:
+            extra_addons_path = f',{venv_path}/odoo/odoo/addons'
+        bash_command = \
+            f"bin/{executable} " \
+            f"{'-c .odoorc' if odoorc_exist else ''} " \
+            f"--addons-path={addons_path}{venv_path}/addons-extra" \
+            f"{extra_addons_path} " \
+            f"{extra_command} " \
+            f"--db_port={self.db_port} --xmlrpc-port={self.xmlrpc_port} " \
+            f"--logfile={venv_path}/migration.log " \
+            "--limit-time-cpu=600 --limit-time-real=1200 "\
+            f"--load={load} "
         cwd_path = '%s/' % venv_path
         if version != '7.0':
             bash_command += "--data-dir=%s/data_dir " % venv_path
