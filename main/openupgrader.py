@@ -453,20 +453,13 @@ class Connection:
             repo_version = repo_text.split(' ')[1]
             if not os.path.isdir('%s/repos/%s' % (venv_path, repo_name)):
                 process = subprocess.Popen([
-                    'git clone %s --single-branch -b %s --depth 1 '
-                    '%s/repos/%s'
-                    % (repo, repo_version, venv_path, repo_name)
+                    f'git clone --single-branch -b {repo_version} {repo} --depth 1 '
+                    f'{venv_path}/repos/{repo_name}'
                 ], cwd=venv_path, shell=True)
                 process.wait()
             process = subprocess.Popen([
-                'cd %s/repos/%s '
-                '&& git remote set-branches --add origin %s '
-                '&& git fetch '
-                '&& git checkout origin/%s' % (
-                    venv_path, repo_name,
-                    repo_version,
-                    repo_version)
-            ], cwd=venv_path, shell=True)
+                'git pull'
+            ], cwd=f"{venv_path}/repos/{repo_name}", shell=True)
             process.wait()
             # copy modules to create a unique addons path
             for root, dirs, files in os.walk(
