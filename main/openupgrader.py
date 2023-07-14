@@ -133,12 +133,14 @@ class Connection:
         bash_command = \
             f"bin/{executable} " \
             f"{'-c .odoorc' if odoorc_exist else ''} " \
-            f"--addons-path={addons_path}{venv_path}/addons-extra" \
-            f"{extra_addons_path} " \
+            f"{not odoorc_exist and f'--addons-path={addons_path}' or ''}" \
+            f"{not odoorc_exist and f'{venv_path}/addons-extra' or ''}" \
+            f"{not odoorc_exist and extra_addons_path or ''} " \
             f"{extra_command} " \
             f"--db_port={self.db_port} --xmlrpc-port={self.xmlrpc_port} " \
             f"--logfile={venv_path}/migration.log " \
-            "--limit-time-cpu=600 --limit-time-real=1200 "\
+            f"{not odoorc_exist and '--limit-time-cpu=600' or ''} " \
+            f"{not odoorc_exist and '--limit-time-real=1200' or ''} " \
             f"--load={load} "
         cwd_path = '%s/' % venv_path
         if version != '7.0':
