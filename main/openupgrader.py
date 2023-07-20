@@ -122,6 +122,7 @@ class Connection:
             os.path.isfile(
                 os.path.join(venv_path, '.odoorc')
             )
+            and not self.migrate_ddt
         )
         addons_path = f'{venv_path}/repos/odoo/addons,'
         if version in ['8.0', '9.0', '10.0', '11.0', '12.0', '13.0']:
@@ -159,13 +160,17 @@ class Connection:
             if not save:
                 self.odoo_connect()
             else:
-                modules_to_not_install = \
-                    "modules_auto_install_disabled = partner_autocomplete,iap,mail_bot,account_edi,account_edi_facturx,account_edi_ubl,l10n_it_edi,l10n_it_edi_sdicoop"
+                not_auto_install_list = [
+                    "partner_autocomplete", "iap", "mail_bot", "account_edi",
+                    "account_edi_facturx", "account_edi_ubl", "l10n_it_stock_ddt"
+                ]
+                mod_not_install = \
+                    f"modules_auto_install_disabled = {','.join(not_auto_install_list)}"
                 subprocess.Popen(
                     ['mv ~/.odoorc ./'], shell=True, cwd=cwd_path
                 ).wait()
                 subprocess.Popen(
-                    [f'sed -i "s/^osv_memory_age_limit.*/{modules_to_not_install}/g" .odoorc'],
+                    [f'sed -i "s/^osv_memory_age_limit.*/{mod_not_install}/g" .odoorc'],
                     shell=True, cwd=cwd_path
                 ).wait()
         time.sleep(5)
