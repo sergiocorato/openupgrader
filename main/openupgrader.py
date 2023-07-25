@@ -208,7 +208,7 @@ class Connection:
             self.venv_path, f'openupgrade{to_version}', 'data_dir', 'filestore'
         )
         if not os.path.isdir(filestore_path):
-            os.mkdir(filestore_path)
+            os.makedirs(filestore_path, exist_ok=True)
         dump_folder = os.path.join(self.path, 'filestore')
         dump_file = os.path.join(self.path, 'filestore.tar')
         if os.path.isdir(dump_folder):
