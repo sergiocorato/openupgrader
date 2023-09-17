@@ -295,13 +295,11 @@ class Connection:
         if self.create_venv:
             self.create_venv_git_version(to_version, self.to_branch)
             self.to_branch = False
+            self.create_venv_git_version(from_version)
         # FIXME NB.: Per i test di migrazione alla 10.0 rimosso il compute da
         #  /tmp_venv/openupgrade10.0/odoo/addons/product/models$ cat product_template.py
         #  altrimenti ci mette ore
-        # self.create_venv_git_version(from_version)
         if self.restore_db_update:
-            # STEP1: create venv for current version to fix it
-            self.create_venv_git_version(from_version)
             if self.filestore:
                 self.restore_filestore(from_version, from_version)
             self.restore_db(from_version)
