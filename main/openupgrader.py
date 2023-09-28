@@ -601,6 +601,22 @@ class Connection:
         print('Modules: %s' % msg_modules)
         print('Modules after: %s' % msg_modules_after)
 
+    @staticmethod
+    def uninst(module_to_uninstall, module_to_unistall_id, success):
+        try:
+            module_to_unistall_id.button_immediate_uninstall()
+            module_to_unistall_id.unlink()
+            print('Module %s uninstalled' % module_to_uninstall)
+            success = 5
+        except Exception as e:
+            print(
+                'Module %s not uninstalled for %s, trying %s/%s times.' % (
+                    module_to_uninstall, str(e).replace('\n', ''), success + 1, 5)
+            )
+            time.sleep(10)
+            success += 1
+        return success
+
     def install_uninstall_module(self, module, install=True):
         module_obj = self.client.env['ir.module.module']
         to_remove_modules = module_obj.search(
@@ -615,12 +631,8 @@ class Connection:
                     or state.get('uninstallable'):
                 module_id = module_obj.search([('name', '=', module)])
                 if module_id:
-                    try:
-                        module_id.button_immediate_uninstall()
-                        print('Module %s uninstalled' % module)
-                        module_id.unlink()
-                    except Exception as e:
-                        print('Module %s not uninstalled for %s' % (module, e))
-                        pass
+                    res = 0
+                    while res < 5:
+                        res = self.uninst(module, module_id, res)
                 else:
                     print('Module %s not found' % module)
