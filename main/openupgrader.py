@@ -75,7 +75,6 @@ class Connection:
         self.receipts = config.load_receipts('openupgrade_config.yml')
         self.fixes = openupgrade_fixes.Fixes()
         self.from_version = False
-        self.to_branch = False
         self.to_version = False
         self.restore_db_update = False
         self.restore_db_only = False
@@ -83,6 +82,7 @@ class Connection:
         self.filestore = False
         self.fix_banks = False
         self.migrate_ddt = False
+        self.repos = False
 
     def odoo_connect(self):
         self.client = odooly.Client(
@@ -276,7 +276,6 @@ class Connection:
                        restore_db_only=False, filestore=False, create_venv=True,
                        fix_banks=False, migrate_ddt=False):
         self.from_version = from_version
-        self.to_branch = to_version if len(to_version) > 4 else False
         self.to_version = to_version[:4]
         self.restore_db_update = restore_db_update
         self.restore_db_only = restore_db_only
@@ -293,8 +292,7 @@ class Connection:
         to_version = self.to_version
         from_version = self.from_version
         if self.create_venv:
-            self.create_venv_git_version(to_version, self.to_branch)
-            self.to_branch = False
+            self.create_venv_git_version(to_version)
             self.create_venv_git_version(from_version)
         # FIXME NB.: Per i test di migrazione alla 10.0 rimosso il compute da
         #  /tmp_venv/openupgrade10.0/odoo/addons/product/models$ cat product_template.py
@@ -400,35 +398,37 @@ class Connection:
         self.disable_mail(disable=False)
         self.database_cleanup(version)
 
-    def create_venv_git_version(self, version, branch=False, openupgrade=True):
-        venv_path = '%s/%s%s' % (
+    def create_venv_git_version(self, version, openupgrade=True):
+        self.repos = config.load_config('openupgrade_repos.yml', version)
+        odoo_path = '%s/%s%s' % (
             self.venv_path, 'openupgrade' if openupgrade else 'standard',
             version)
         py_version = '2.7' if version in ['7.0', '8.0', '9.0', '10.0'] \
             else '3.5' if version == '11.0' else '3.7'
         odoo_repo = 'https://github.com/sergiocorato/OpenUpgrade.git'
-        if not os.path.isdir(venv_path):
-            subprocess.Popen(['mkdir -p %s' % venv_path], shell=True).wait()
+        if not os.path.isdir(odoo_path):
+            subprocess.Popen(['mkdir -p %s' % odoo_path], shell=True).wait()
             # do not recreate virtualenv as it regenerate file with bug in split()
             # ../openupgrade10.0/lib/python2.7/site-packages/pip/_internal/vcs/git.py
             subprocess.Popen([
-                'virtualenv -p /usr/bin/python%s %s' % (py_version, venv_path)],
-                cwd=venv_path, shell=True).wait()
-        if not os.path.isdir(os.path.join(venv_path, 'odoo')):
+                'virtualenv -p /usr/bin/python%s %s' % (py_version, odoo_path)],
+                cwd=odoo_path, shell=True).wait()
+        # install odoo repo, from v. 14.0 it contains only migration script
+        if not os.path.isdir(os.path.join(odoo_path, 'odoo')):
             subprocess.Popen([
                 'cd %s && git clone --single-branch %s -b %s --depth 1 odoo' % (
-                    venv_path, odoo_repo, branch or version)],
-                cwd=venv_path, shell=True).wait()
-        elif branch:
-            subprocess.Popen(['cd %s/odoo && git reset --hard origin/%s && git pull '
-                              'origin %s' % (
-                                  venv_path, version, branch)],
-                             cwd=venv_path, shell=True).wait()
+                    odoo_path, odoo_repo, version)],
+                cwd=odoo_path, shell=True).wait()
         else:
             subprocess.Popen(['cd %s/odoo && git reset --hard origin/%s && git pull '
                               '&& git reset --hard origin/%s' % (
-                                  venv_path, version, version
-                              )], cwd=venv_path, shell=True).wait()
+                                  odoo_path, version, version
+                              )], cwd=odoo_path, shell=True).wait()
+        if version not in [
+            '7.0', '8.0', '9.0', '10.0', '11.0', '12.0', '13.0'
+        ]:
+            # install odoo repo
+            self.install_repo('odoo', odoo_path)
         commands = [
             'bin/pip install "setuptools<58.0.0"',
             'bin/pip install -r odoo/requirements.txt',
@@ -439,45 +439,46 @@ class Connection:
             ] else 'cd repos/odoo && ../../bin/pip install -e . ',
         ]
         for command in commands:
-            subprocess.Popen(command, cwd=venv_path, shell=True).wait()
-        extra_paths = ['%s/addons-extra' % venv_path,
-                       '%s/repos' % venv_path]
+            subprocess.Popen(command, cwd=odoo_path, shell=True).wait()
+        extra_paths = ['%s/addons-extra' % odoo_path,
+                       '%s/repos' % odoo_path]
         for path in extra_paths:
             if not os.path.isdir(path):
                 process = subprocess.Popen(
-                    'mkdir %s' % path, cwd=venv_path, shell=True)
+                    'mkdir %s' % path, cwd=odoo_path, shell=True)
                 process.wait()
-        if os.path.isfile(os.path.join(venv_path, 'migration.log')):
+        if os.path.isfile(os.path.join(odoo_path, 'migration.log')):
             process = subprocess.Popen(
-                'rm %s' % 'migration.log', cwd=venv_path, shell=True)
+                'rm %s' % 'migration.log', cwd=odoo_path, shell=True)
             process.wait()
-        repos = config.load_config('openupgrade_repos.yml', version)
-        for repo_name in repos:
-            repo_text = repos.get(repo_name)
-            repo = repo_text.split(' ')[0]
-            repo_version = repo_text.split(' ')[1]
-            if not os.path.isdir('%s/repos/%s' % (venv_path, repo_name)):
-                process = subprocess.Popen([
-                    f'git clone --single-branch -b {repo_version} {repo} --depth 1 '
-                    f'{venv_path}/repos/{repo_name}'
-                ], cwd=venv_path, shell=True)
-                process.wait()
+
+        for repo_name in self.repos:
+            self.install_repo(repo_name, odoo_path)
+
+    def install_repo(self, repo_name, odoo_path):
+        repo_text = self.repos.get(repo_name)
+        repo = repo_text.split(' ')[0]
+        repo_version = repo_text.split(' ')[1]
+        repo_path = os.path.join(odoo_path, 'repos', repo_name)
+        if not os.path.isdir(repo_path):
             process = subprocess.Popen([
-                'git pull'
-            ], cwd=f"{venv_path}/repos/{repo_name}", shell=True)
+                f'git clone --single-branch -b {repo_version} {repo} --depth 1 '
+                f'{repo_path}'
+            ], cwd=odoo_path, shell=True)
             process.wait()
-            # copy modules to create a unique addons path
-            for root, dirs, files in os.walk(
-                    '%s/repos/%s/' % (venv_path, repo_name)):
-                for d in dirs:
-                    if d not in ['.git', 'setup']:
-                        process = subprocess.Popen([
-                            "cp -rf %s/repos/%s/%s %s/addons-extra/" % (
-                                venv_path, repo_name, d,
-                                venv_path)
-                        ], cwd=venv_path, shell=True)
-                        process.wait()
-                break
+        process = subprocess.Popen([
+            'git pull'
+        ], cwd=f"{repo_path}", shell=True)
+        process.wait()
+        # copy modules to create a unique addons path
+        for root, dirs, files in os.walk(repo_path):
+            for d in dirs:
+                if d not in ['.git', 'setup']:
+                    process = subprocess.Popen([
+                        f"cp -rf {repo_path}/{d} {odoo_path}/addons-extra/"
+                    ], cwd=odoo_path, shell=True)
+                    process.wait()
+            break
 
     def database_cleanup(self, to_version):
         self.start_odoo(to_version)
