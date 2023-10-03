@@ -83,6 +83,7 @@ class Connection:
         self.fix_banks = False
         self.migrate_ddt = False
         self.repos = False
+        self.client = False
 
     def odoo_connect(self):
         self.client = odooly.Client(
@@ -467,7 +468,7 @@ class Connection:
             ], cwd=odoo_path, shell=True)
             process.wait()
         process = subprocess.Popen([
-            'git pull'
+            f'git fetch --all && git reset --hard origin/{repo_version}'
         ], cwd=f"{repo_path}", shell=True)
         process.wait()
         # copy modules to create a unique addons path
