@@ -102,7 +102,7 @@ class Connection:
         :param openupgrade_folder: if True create odoo in a folder openupgrade, else
          standard
         :param extra_command: command that will be passed after executable
-        :param save: if True save .odoorc
+        :param save: if True save .odoorc and stop Odoo
         :return: Odoo instance in "self.client" if not updated, else nothing
         """
         venv_path = '%s/%s%s' % (
@@ -115,7 +115,7 @@ class Connection:
             load = 'base,web'
         if version not in [
             '7.0', '8.0', '9.0', '10.0', '11.0', '12.0', '13.0'
-        ] and (update or save):
+        ]:
             load += ',openupgrade_framework,module_change_auto_install'
         executable = 'openerp-server' if version in ['7.0', '8.0', '9.0']\
             else 'odoo'
