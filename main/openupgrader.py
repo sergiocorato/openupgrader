@@ -143,6 +143,8 @@ class Connection:
             f"--logfile={venv_path}/migration.log " \
             f"{not odoorc_exist and '--limit-time-cpu=600' or ''} " \
             f"{not odoorc_exist and '--limit-time-real=1200' or ''} " \
+            f"{not odoorc_exist and '--limit-memory-soft=4147483648' or ''} " \
+            f"{not odoorc_exist and '--limit-memory-hard=4679107584' or ''} " \
             f"--load={load} "
         cwd_path = '%s/' % venv_path
         if version != '7.0':
