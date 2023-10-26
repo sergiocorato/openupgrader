@@ -141,8 +141,8 @@ class Connection:
             f"{extra_command} " \
             f"--db_port={self.db_port} --xmlrpc-port={self.xmlrpc_port} " \
             f"--logfile={venv_path}/migration.log " \
-            f"{not odoorc_exist and '--limit-time-cpu=600' or ''} " \
-            f"{not odoorc_exist and '--limit-time-real=1200' or ''} " \
+            f"{not odoorc_exist and '--limit-time-cpu=1600' or ''} " \
+            f"{not odoorc_exist and '--limit-time-real=3200' or ''} " \
             f"{not odoorc_exist and '--limit-memory-soft=4147483648' or ''} " \
             f"{not odoorc_exist and '--limit-memory-hard=4679107584' or ''} " \
             f"--load={load} "
