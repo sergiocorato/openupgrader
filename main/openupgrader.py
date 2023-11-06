@@ -319,7 +319,25 @@ class Connection:
         self.uninstall_modules(from_version, before_migration=True)
         self.delete_old_modules(from_version)
 
+    def disable_cron(self, disable=True):
+        # add a big number to priority to identify them later
+        value = 55000 * (1 if disable else -1)
+        sqls = [
+            f"UPDATE ir_cron set priority = priority {value} where active is true;",
+            "UPDATE ir_cron set active = false;",
+        ]
+        if not disable:
+            sqls = [
+                f"UPDATE ir_cron set active = true WHERE priority > {value};",
+                f"UPDATE ir_cron set priority = priority {value} where active is true;",
+            ]
+        for sql in sqls:
+            subprocess.Popen(
+                [f'psql -p {self.db_port} -d {self.db} -c f"{sql}"']
+            )
+
     def do_migration(self):
+        self.disable_cron()
         to_version = self.to_version
         from_version = self.from_version
         if to_version == '11.0':
@@ -343,6 +361,7 @@ class Connection:
         if self.filestore:
             self.dump_filestore(to_version)
         print(f"Migration done from version {from_version} to version {to_version}")
+        self.disable_cron(False)
         if self.from_version in versions:
             self.from_version = self.to_version
             self.to_version = versions[self.from_version]
