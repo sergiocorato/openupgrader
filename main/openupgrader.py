@@ -321,19 +321,23 @@ class Connection:
 
     def disable_cron(self, disable=True):
         # add a big number to priority to identify them later
-        value = 55000 * (1 if disable else -1)
+        value = 55000
+        sign = '+' if disable else '-'
         sqls = [
-            f"UPDATE ir_cron set priority = priority {value} where active is true;",
+            f"UPDATE ir_cron set priority = priority {sign} {value} "
+            "where active is true;",
             "UPDATE ir_cron set active = false;",
         ]
         if not disable:
             sqls = [
                 f"UPDATE ir_cron set active = true WHERE priority > {value};",
-                f"UPDATE ir_cron set priority = priority {value} where active is true;",
+                f"UPDATE ir_cron set priority = priority {sign} {value} "
+                "where active is true;",
             ]
         for sql in sqls:
             subprocess.Popen(
-                [f'psql -p {self.db_port} -d {self.db} -c f"{sql}"']
+                [f'psql -p {self.db_port} -d {self.db} -c "{sql}"'],
+                shell=True, cwd=self.path
             )
 
     def do_migration(self):
