@@ -22,6 +22,15 @@ versions = {
     '14.0': '15.0',
     '15.0': '16.0',
 }
+pg_ports = {
+    '9.6': ['5432', '5434'],
+    '11': ['5440', '5441', '5442'],
+    '12': ['5452'],
+    '13': ['5462'],
+    '14': ['5433', '5435'],
+    '15': ['5436'],
+    '16': ['5437'],
+}
 
 
 class Connection:
@@ -70,8 +79,9 @@ class Connection:
         self.path_name = self.db
         self.path = os.path.expanduser('~')
         self.venv_path = os.path.join(self.path, 'tmp_venv')
-        self.pg_bin_path = '/usr/lib/postgresql/11/bin/' if self.db_port in [
-            '5439', '5440', '5441'] else ''
+        pg_version = [x for x in pg_ports if self.db_port in pg_ports[x]]
+        self.pg_bin_path = f'/usr/lib/postgresql/{pg_version}/bin/' if pg_version \
+            else ''
         self.receipts = config.load_receipts('openupgrade_config.yml')
         self.fixes = openupgrade_fixes.Fixes()
         self.from_version = False
