@@ -80,8 +80,9 @@ class Connection:
         self.path = os.path.expanduser('~')
         self.venv_path = os.path.join(self.path, 'tmp_venv')
         pg_version = [x for x in pg_ports if self.db_port in pg_ports[x]]
-        self.pg_bin_path = f'/usr/lib/postgresql/{pg_version}/bin/' if pg_version \
-            else ''
+        self.pg_bin_path = os.path.join(
+            '/', 'usr', 'lib', 'postgresql', pg_version[0], 'bin'
+        ) if pg_version else ''
         self.receipts = config.load_receipts('openupgrade_config.yml')
         self.fixes = openupgrade_fixes.Fixes()
         self.from_version = False
@@ -211,9 +212,9 @@ class Connection:
     def dump_database(self, version):
         pg_bin_path = self.pg_bin_path
         process = subprocess.Popen(
-            ['%spg_dump -O -p %s -d %s | gzip > %s/database.%s.gz' % (
-                 pg_bin_path, self.db_port, self.db, self.venv_path, version
-             )], shell=True)
+            [f'{os.path.join(pg_bin_path, "pg_dump")} -O -p {self.db_port} -d {self.db}'
+             f' | gzip > {os.path.join(self.venv_path, "database.%s.gz" % version)}'
+             ], shell=True)
         process.wait()
 
     def restore_filestore(self, from_version, to_version):
@@ -254,14 +255,12 @@ class Connection:
 
     def restore_db(self, from_version):
         pg_bin_path = self.pg_bin_path
-        process = subprocess.Popen(
-            ['%sdropdb -p %s %s' % (pg_bin_path, self.db_port, self.db)],
-            shell=True)
-        process.wait()
-        process = subprocess.Popen(
-            ['%screatedb -p %s %s' % (
-                pg_bin_path, self.db_port, self.db)], shell=True)
-        process.wait()
+        subprocess.Popen(
+            [f'{os.path.join(pg_bin_path, "dropdb")} -p {self.db_port} {self.db}'],
+            shell=True).wait()
+        subprocess.Popen(
+            [f'{os.path.join(pg_bin_path, "createdb")} -p {self.db_port} {self.db}'],
+            shell=True).wait()
         dump_file = os.path.join(self.path, 'database.gz')
         if not os.path.isfile(dump_file):
             dump_file_sql = os.path.join(self.path, 'database.sql')
@@ -272,17 +271,16 @@ class Connection:
                 ], shell=True).wait()
                 os.unlink(dump_file_sql)
         if os.path.isfile(dump_file):
-            process = subprocess.Popen(
+            subprocess.Popen(
                 ['mv %s %s/database.%s.gz' % (
-                    dump_file, self.venv_path, from_version)], shell=True)
-            process.wait()
+                    dump_file, self.venv_path, from_version)], shell=True).wait()
         dump_file = os.path.join(
             self.venv_path, 'database.%s.gz' % from_version)
 
-        process = subprocess.Popen(
-            ['cat %s | gunzip | %spsql -U $USER -p %s -d %s ' % (
-                dump_file, pg_bin_path, self.db_port, self.db)], shell=True)
-        process.wait()
+        subprocess.Popen(
+            [f'cat {dump_file} | gunzip | '
+             f'{os.path.join(pg_bin_path, "psql")} -U $USER -p {self.db_port} '
+             f'-d {self.db}'], shell=True, cwd=self.path).wait()
 
     # MASTER function #####
     def init_migration(self, from_version, to_version, restore_db_update=False,
