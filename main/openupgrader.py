@@ -217,6 +217,18 @@ class Connection:
              ], shell=True)
         process.wait()
 
+    def move_filestore(self, from_folder=False, from_version=False, to_version=False):
+        if not from_folder:
+            from_folder = (
+                f'{self.venv_path}/openupgrade{from_version}/data_dir'
+                f'/filestore/{self.db}')
+        to_version_filestore = (
+            f'{self.venv_path}/openupgrade{to_version}/data_dir'
+            f'/filestore/{self.db}')
+        if os.path.isdir(to_version_filestore):
+            os.rmdir(to_version_filestore)
+        os.rename(from_folder, to_version_filestore)
+
     def restore_filestore(self, from_version, to_version):
         filestore_path = os.path.join(
             self.venv_path, f'openupgrade{to_version}', 'data_dir', 'filestore'
@@ -226,11 +238,8 @@ class Connection:
         dump_folder = os.path.join(self.path, 'filestore')
         dump_file = os.path.join(self.path, 'filestore.tar')
         if os.path.isdir(dump_folder):
-            process = subprocess.Popen([
-                f'tar -zcvf {self.venv_path}/filestore.{from_version}.tar filestore'
-            ], shell=True, cwd=self.path)
-            process.wait()
-            shutil.rmtree(dump_folder)
+            self.move_filestore(from_folder=dump_folder, to_version=to_version)
+            return
         elif os.path.isfile(dump_file):
             os.rename(dump_file, f'{self.venv_path}/filestore.{from_version}.tar')
         dump_file = os.path.join(
@@ -321,7 +330,7 @@ class Connection:
             self.restore_db(from_version)
             self.restore_db_only = False
         if self.filestore:
-            self.restore_filestore(from_version, to_version)
+            self.move_filestore(from_version, to_version)
         self.disable_mail(disable=True)
         self.sql_fixes(self.receipts[from_version])
         self.uninstall_modules(from_version, before_migration=True)
@@ -363,8 +372,8 @@ class Connection:
             self.install_uninstall_module('l10n_it_intrastat')
             self.stop_odoo()
         self.dump_database(to_version)
-        if self.filestore:
-            self.dump_filestore(to_version)
+        # if self.filestore:
+        #     self.dump_filestore(to_version)
         print(f"Migration done from version {from_version} to version {to_version}")
         self.disable_cron()
         if self.from_version in versions:
@@ -438,7 +447,8 @@ class Connection:
             # do not recreate virtualenv as it regenerate file with bug in split()
             # ../openupgrade10.0/lib/python2.7/site-packages/pip/_internal/vcs/git.py
             subprocess.Popen([
-                'virtualenv -p /usr/bin/python%s %s' % (py_version, odoo_path)],
+                'virtualenv -p /home/sergio/.pyenv/versions/%s/bin/python%s %s' % (
+                    '3.7.16' if py_version == '3.7' else '', py_version, odoo_path)],
                 cwd=odoo_path, shell=True).wait()
         # install odoo repo, from v. 14.0 it contains only migration script
         if not os.path.isdir(os.path.join(odoo_path, 'odoo')):
