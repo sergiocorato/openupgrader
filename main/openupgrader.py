@@ -226,7 +226,7 @@ class Connection:
             f'{self.venv_path}/openupgrade{to_version}/data_dir'
             f'/filestore/{self.db}')
         if os.path.isdir(to_version_filestore):
-            os.rmdir(to_version_filestore)
+            shutil.rmtree(to_version_filestore, ignore_errors=True)
         os.rename(from_folder, to_version_filestore)
 
     def restore_filestore(self, from_version, to_version):
@@ -330,7 +330,7 @@ class Connection:
             self.restore_db(from_version)
             self.restore_db_only = False
         if self.filestore:
-            self.move_filestore(from_version, to_version)
+            self.move_filestore(from_version=from_version, to_version=to_version)
         self.disable_mail(disable=True)
         self.sql_fixes(self.receipts[from_version])
         self.uninstall_modules(from_version, before_migration=True)
