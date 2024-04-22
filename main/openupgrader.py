@@ -225,9 +225,10 @@ class Connection:
         to_version_filestore = (
             f'{self.venv_path}/openupgrade{to_version}/data_dir'
             f'/filestore/{self.db}')
-        if os.path.isdir(to_version_filestore):
+        if os.path.isdir(to_version_filestore) and not self.restore_db_only:
             shutil.rmtree(to_version_filestore, ignore_errors=True)
-        os.rename(from_folder, to_version_filestore)
+        if not self.restore_db_only:
+            os.rename(from_folder, to_version_filestore)
 
     def restore_filestore(self, from_version, to_version):
         filestore_path = os.path.join(
