@@ -217,7 +217,8 @@ class Connection:
              ], shell=True)
         process.wait()
 
-    def move_filestore(self, from_folder=False, from_version=False, to_version=False):
+    def move_filestore(self, from_folder=False, from_version=False, to_version=False,
+                       restore_db_only=False):
         if not from_folder:
             from_folder = (
                 f'{self.venv_path}/openupgrade{from_version}/data_dir'
@@ -225,9 +226,9 @@ class Connection:
         to_version_filestore = (
             f'{self.venv_path}/openupgrade{to_version}/data_dir'
             f'/filestore/{self.db}')
-        if os.path.isdir(to_version_filestore) and not self.restore_db_only:
+        if os.path.isdir(to_version_filestore) and not restore_db_only:
             shutil.rmtree(to_version_filestore, ignore_errors=True)
-        if not self.restore_db_only:
+        if not restore_db_only:
             os.rename(from_folder, to_version_filestore)
 
     def restore_filestore(self, from_version, to_version):
@@ -312,6 +313,7 @@ class Connection:
     def prepare_migration(self):
         to_version = self.to_version
         from_version = self.from_version
+        restore_db_only = self.restore_db_only
         if self.create_venv:
             self.create_venv_git_version(to_version)
             self.create_venv_git_version(from_version)
@@ -327,11 +329,12 @@ class Connection:
             self.start_odoo(from_version, update=True)
             self.restore_db_update = False
         # restore db if not restored before, not needed if migration for more version
-        elif self.restore_db_only:
+        elif restore_db_only:
             self.restore_db(from_version)
             self.restore_db_only = False
         if self.filestore:
-            self.move_filestore(from_version=from_version, to_version=to_version)
+            self.move_filestore(from_version=from_version, to_version=to_version,
+                                restore_db_only=restore_db_only)
         self.disable_mail(disable=True)
         self.sql_fixes(self.receipts[from_version])
         self.uninstall_modules(from_version, before_migration=True)
