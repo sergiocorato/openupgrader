@@ -597,12 +597,12 @@ class Connection:
         receipt = self.receipts[version]
         for modules in receipt:
             if after_migration:
-                modules_to_uninstall = modules.get('uninstall_after_migration', False)
+                modules_to_uninstall = modules.get('uninstall_after_migration_to_this_version', False)
                 if modules_to_uninstall:
                     for module in modules_to_uninstall:
                         self.install_uninstall_module(module, install=False)
             if before_migration:
-                modules_to_uninstall = modules.get('uninstall_before_migration', False)
+                modules_to_uninstall = modules.get('uninstall_before_migration_to_next_version', False)
                 if modules_to_uninstall:
                     for module in modules_to_uninstall:
                         self.install_uninstall_module(module, install=False)
