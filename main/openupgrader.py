@@ -258,9 +258,10 @@ class Connection:
 
     def dump_filestore(self, version):
         process = subprocess.Popen([
-            'cd %s/openupgrade%s/data_dir/filestore && '
-            'tar -zcvf %s/filestore.%s.tar %s' % (
-                self.venv_path, version, self.venv_path, version, self.db)
+            'cd %s/openupgrade%s/data_dir/filestore/%s && '
+            'tar -zcvf %s/filestore.%s.tar *' % (
+                self.venv_path, version, self.db,
+                self.venv_path, version)
         ], shell=True)
         process.wait()
 
@@ -454,7 +455,7 @@ class Connection:
                 'virtualenv -p /home/sergio/.pyenv/versions/%s/bin/python%s %s' % (
                     '3.7.16' if py_version == '3.7' else '', py_version, odoo_path)],
                 cwd=odoo_path, shell=True).wait()
-        # install odoo repo, from v. 14.0 it contains only migration script
+        # install odoo Openupgrade repo, from v. 14.0 it contains only migration script
         if not os.path.isdir(os.path.join(odoo_path, 'odoo')):
             subprocess.Popen([
                 'cd %s && git clone --single-branch %s -b %s --depth 1 odoo' % (
