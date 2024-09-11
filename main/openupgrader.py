@@ -380,7 +380,7 @@ class Connection:
         # if self.filestore:
         #     self.dump_filestore(to_version)
         print(f"Migration done from version {from_version} to version {to_version}")
-        self.disable_cron()
+        # self.disable_cron() # to be re-enabled manually after all is gone ok
         if self.from_version in versions:
             self.from_version = self.to_version
             self.to_version = versions[self.from_version]
