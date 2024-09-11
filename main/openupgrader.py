@@ -258,10 +258,9 @@ class Connection:
 
     def dump_filestore(self, version):
         process = subprocess.Popen([
-            'cd %s/openupgrade%s/data_dir/filestore/%s && '
-            'tar -zcvf %s/filestore.%s.tar *' % (
-                self.venv_path, version, self.db,
-                self.venv_path, version)
+            'cd %s/openupgrade%s/data_dir/filestore && '
+            'tar -zcvf %s/filestore.%s.tar %s' % (
+                self.venv_path, version, self.venv_path, version, self.db)
         ], shell=True)
         process.wait()
 
