@@ -288,10 +288,19 @@ class Connection:
         dump_file = os.path.join(
             self.venv_path, 'database.%s.gz' % from_version)
 
-        subprocess.Popen(
-            [f'cat {dump_file} | gunzip | '
-             f'{os.path.join(pg_bin_path, "psql")} -U $USER -p {self.db_port} '
-             f'-d {self.db}'], shell=True, cwd=self.path).wait()
+        if os.path.isfile(dump_file):
+            subprocess.Popen(
+                [f'cat {dump_file} | gunzip | '
+                 f'{os.path.join(pg_bin_path, "psql")} -U $USER -p {self.db_port} '
+                 f'-d {self.db}'], shell=True, cwd=self.path).wait()
+
+        dump_file_pg = os.path.join(self.path, 'database.dump')
+        if os.path.isfile(dump_file_pg):
+            subprocess.Popen(
+                [f'{os.path.join(pg_bin_path, "pg_restore")} -U $USER -p {self.db_port}'
+                 f' -d {self.db} --no-owner {dump_file_pg}'],
+                shell=True, cwd=self.path).wait()
+            os.unlink(dump_file_pg)
 
     # MASTER function #####
     def init_migration(self, from_version, to_version, restore_db_update=False,
