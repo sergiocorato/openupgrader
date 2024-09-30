@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<odoo>
+    <record id="view_openupgrader_repo_search" model="ir.ui.view">
+        <field name="name">openupgrader.repo.search</field>
+        <field name="model">openupgrader.repo</field>
+        <field name="arch" type="xml">
+            <search string="OpenUpgrader Repo Search">
+                <field name="odoo_version_id" />
+                <field name="remote_repo_ids" />
+            </search>
+        </field>
+    </record>
+
+    <record id="view_openupgrader_repo_tree" model="ir.ui.view">
+        <field name="name">openupgrader.repo.tree</field>
+        <field name="model">openupgrader.repo</field>
+        <field name="arch" type="xml">
+            <tree>
+                <field name="odoo_version_id" />
+                <field name="remote_repo_ids" />
+            </tree>
+        </field>
+    </record>
+
+    <record id="view_openupgrader_repo_form" model="ir.ui.view">
+        <field name="name">openupgrader.repo.form</field>
+        <field name="model">openupgrader.repo</field>
+        <field name="arch" type="xml">
+            <form string="OpenUpgrader Repo">
+                <header>
+                </header>
+                <sheet string="OpenUpgrader Repo">
+                    <group>
+                        <field name="odoo_version_id" />
+                    </group>
+                    <group>
+                        <field name="remote_repo_ids" >
+                            <tree>
+                                <field name="name" />
+                                <field name="remote_url" />
+                                <field name="remote_branch" />
+                            </tree>
+                        </field>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_openupgrader_repo" model="ir.actions.act_window">
+        <field name="name">OpenUpgrader Repo</field>
+        <field name="type">ir.actions.act_window</field>
+        <field name="res_model">openupgrader.repo</field>
+        <field name="view_mode">tree,form</field>
+    </record>
+
+    <record model="ir.ui.menu" id="menu_openupgrader_repo">
+        <field name="name">OpenUpgrader Repo</field>
+        <field name="sequence" eval="20" />
+        <field name="parent_id" ref="menu_openupgrader" />
+        <field name="action" ref="action_openupgrader_repo" />
+    </record>
+</odoo>

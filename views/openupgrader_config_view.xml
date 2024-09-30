@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<odoo>
+    <record id="view_openupgrader_config_search" model="ir.ui.view">
+        <field name="name">openupgrader.config.search</field>
+        <field name="model">openupgrader.config</field>
+        <field name="arch" type="xml">
+            <search string="OpenUpgrader Configuration Search">
+                <field name="odoo_version_id" />
+                <field name="sql_update_command_ids" />
+                <field name="module_auto_install_ids" />
+                <field name="module_to_delete_after_migration_ids" />
+                <field name="module_to_uninstall_after_migration_ids" />
+                <field name="module_to_uninstall_before_migration_ids" />
+            </search>
+        </field>
+    </record>
+
+    <record id="view_openupgrader_config_tree" model="ir.ui.view">
+        <field name="name">openupgrader.config.tree</field>
+        <field name="model">openupgrader.config</field>
+        <field name="arch" type="xml">
+            <tree>
+                <field name="odoo_version_id" />
+                <field name="sql_update_command_ids" />
+                <field name="module_auto_install_ids" />
+                <field name="module_to_delete_after_migration_ids" />
+                <field name="module_to_uninstall_after_migration_ids" />
+                <field name="module_to_uninstall_before_migration_ids" />
+            </tree>
+        </field>
+    </record>
+
+    <record id="view_openupgrader_config_form" model="ir.ui.view">
+        <field name="name">openupgrader.config.form</field>
+        <field name="model">openupgrader.config</field>
+        <field name="arch" type="xml">
+            <form string="OpenUpgrader Configuration">
+                <header>
+                </header>
+                <sheet string="OpenUpgrader Configuration">
+                    <div class="oe_title">
+                        <label for="odoo_version_id" string="Odoo Version" />
+                        <h1>
+                            <field name="odoo_version_id"
+                                class="oe_inline"/>
+                        </h1>
+                    </div>
+                    <group>
+                        <group>
+                            <group name="repos_file" string="Repos File">
+                                <field name="repos_file" filename="repos_file_name" nolabel="1"/>
+                                <field name="repos_file_name" invisible="1"/>
+                                <button type="object" name="button_load_repos"
+                                attrs="{'invisible': ['|',
+                                    ('odoo_version_id', '=', False),
+                                    ('repos_file', '=', False),
+                                ]}"
+                                string="Load repos"/>
+                            </group>
+                        </group>
+                        <group>
+                            <group name="config_file" string="Config File">
+                                <field name="config_file" filename="config_file_name" nolabel="1"/>
+                                <field name="config_file_name" invisible="1"/>
+                                <button type="object" name="button_load_config"
+                                attrs="{'invisible': ['|',
+                                    ('odoo_version_id', '=', False),
+                                    ('config_file', '=', False),
+                                ]}"
+                                string="Load receipt"/>
+                            </group>
+                        </group>
+                    </group>
+                    <group>
+                        <field name="sql_update_command_ids">
+                            <tree editable="top">
+                                <field name="sequence" widget="handle"/>
+                                <field name="name" />
+                            </tree>
+                        </field>
+                        <field name="module_auto_install_ids">
+                            <tree editable="top">
+                                <field name="sequence" widget="handle"/>
+                                <field name="name" />
+                                <field name="module_installed_name" />
+                                <field name="module_to_install_name" />
+                            </tree>
+                        </field>
+                        <field name="module_to_delete_after_migration_ids" widget="many2many_tags" />
+                        <field name="module_to_uninstall_after_migration_ids" widget="many2many_tags" />
+                        <field name="module_to_uninstall_before_migration_ids" widget="many2many_tags" />
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_openupgrader_config" model="ir.actions.act_window">
+        <field name="name">OpenUpgrader Config</field>
+        <field name="type">ir.actions.act_window</field>
+        <field name="res_model">openupgrader.config</field>
+        <field name="view_mode">tree,form</field>
+    </record>
+
+    <record model="ir.ui.menu" id="menu_openupgrader_config">
+        <field name="name">OpenUpgrader Configuration</field>
+        <field name="sequence" eval="15" />
+        <field name="parent_id" ref="menu_openupgrader" />
+        <field name="action" ref="action_openupgrader_config" />
+    </record>
+</odoo>

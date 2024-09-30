@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<odoo>
+    <record id="view_openupgrader_migration_search" model="ir.ui.view">
+        <field name="name">openupgrader.migration.search</field>
+        <field name="model">openupgrader.migration</field>
+        <field name="arch" type="xml">
+            <search string="OpenUpgrader migration Search">
+                <field name="db_name" />
+                <field name="from_version" />
+                <field name="to_version" />
+            </search>
+        </field>
+    </record>
+
+    <record id="view_openupgrader_migration_tree" model="ir.ui.view">
+        <field name="name">openupgrader.migration.tree</field>
+        <field name="model">openupgrader.migration</field>
+        <field name="arch" type="xml">
+            <tree>
+                <field name="db_name" />
+                <field name="from_version" />
+                <field name="to_version" />
+            </tree>
+        </field>
+    </record>
+
+    <record id="view_openupgrader_migration_form" model="ir.ui.view">
+        <field name="name">openupgrader.migration.form</field>
+        <field name="model">openupgrader.migration</field>
+        <field name="arch" type="xml">
+            <form string="OpenUpgrader migration">
+                <header>
+                </header>
+                <sheet string="OpenUpgrader migration">
+                    <group>
+                        <group>
+                            <field name="from_version" />
+                            <field name="to_version" />
+                            <field name="db_name" />
+                            <field name="db_user" />
+                            <field name="db_password" password="1"/>
+                            <field name="pg_user"/>
+                            <field name="openupgrade_repo" />
+                            <field name="odoo_repo" placeholder="https://github.com/OCB/OCB.git" />
+                        </group>
+                        <group>
+                            <field name="db_port" />
+                            <field name="xmlrpc_port" />
+                            <field name="folder" />
+                            <field name="odoo_migrated_state" />
+                            <button name="button_start_odoo"
+                                type="object"
+                                string="Start Odoo (from version)"
+                            />
+                            <button name="button_stop_odoo"
+                                type="object"
+                                string="Stop Odoo"
+                            />
+                        </group>
+                    </group>
+                    <group>
+                        <group>
+                            <field name="restore_db_only" />
+                            <field name="restore_db_update" />
+                            <field name="create_venv" />
+                            <field name="filestore" />
+                        </group>
+                        <group>
+                            <button name="button_create_venv"
+                                type="object"
+                                string="Create virtualenv"/>
+                            <button name="button_prepare_migration"
+                                type="object"
+                                string="Prepare migration"/>
+                        </group>
+                    </group>
+                    <group>
+                        <field name="disabled_cron_ids" />
+                        <field name="repo_ids" />
+                        <field name="config_ids" />
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_openupgrader_migration" model="ir.actions.act_window">
+        <field name="name">OpenUpgrader migration</field>
+        <field name="type">ir.actions.act_window</field>
+        <field name="res_model">openupgrader.migration</field>
+        <field name="view_mode">tree,form</field>
+    </record>
+
+    <record model="ir.ui.menu" id="menu_openupgrader">
+        <field name="name">OpenUpgrader</field>
+        <field name="sequence" eval="10" />
+        <field name="parent_id" ref="base.menu_custom" />
+        <field name="groups_id" eval="[(6,0, [ref('base.group_erp_manager')])]" />
+    </record>
+
+    <record model="ir.ui.menu" id="menu_openupgrader_migration">
+        <field name="name">OpenUpgrader Migration</field>
+        <field name="sequence" eval="10" />
+        <field name="parent_id" ref="menu_openupgrader" />
+        <field name="action" ref="action_openupgrader_migration" />
+    </record>
+</odoo>
