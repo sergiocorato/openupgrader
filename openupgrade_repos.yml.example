@@ -139,9 +139,9 @@ repositories:
       account-closing: https://github.com/efatto/account-closing.git 14.0
       account-invoicing: https://github.com/efatto/account-invoicing.git 14.0
       delivery-carrier: https://github.com/efatto/delivery-carrier.git 14.0
-      odoo: https://github.com/efatto/OCB.git 14.0-mig
+      odoo: https://github.com/efatto/OCB.git 14.0
       manufacture: https://github.com/efatto/manufacture.git 14.0
-      partner-contact: https://github.com/efatto/partner-contact.git 14.0-mig
+      partner-contact: https://github.com/efatto/partner-contact.git 14.0
       purchase-workflow: https://github.com/efatto/purchase-workflow.git 14.0
       server-backend: https://github.com/efatto/server-backend.git 14.0
       stock-logistics-barcode: https://github.com/efatto/stock-logistics-barcode.git 14.0
@@ -266,11 +266,11 @@ repositories:
       website-cms: https://github.com/OCA/website-cms.git 13.0
   - version: '12.0'
     remotes:
-      l10n-italy: https://github.com/efatto/l10n-italy.git 12.0-mig
+      l10n-italy: https://github.com/efatto/l10n-italy.git 12.0
       account-analytic: https://github.com/OCA/account-analytic.git 12.0
       account-closing: https://github.com/efatto/account-closing.git 12.0
       account-financial-reporting: https://github.com/OCA/account-financial-reporting.git 12.0
-      account-financial-tools: https://github.com/efatto/account-financial-tools.git 12.0_fix_asset_migration
+      account-financial-tools: https://github.com/efatto/account-financial-tools.git 12.0
       account-fiscal-rule: https://github.com/OCA/account-fiscal-rule.git 12.0
       account-invoice-reporting: https://github.com/OCA/account-invoice-reporting.git 12.0
       account-invoicing: https://github.com/efatto/account-invoicing.git 12.0
@@ -336,8 +336,8 @@ repositories:
       l10n-italy: https://github.com/OCA/l10n-italy.git 11.0
       account-analytic: https://github.com/OCA/account-analytic.git 11.0
       account-closing: https://github.com/OCA/account-closing.git 11.0
-      account-financial-reporting: https://github.com/efatto/account-financial-reporting.git 11.0_mig
-      account-financial-tools: https://github.com/efatto/account-financial-tools.git 11.0_mig
+      account-financial-reporting: https://github.com/efatto/account-financial-reporting.git 11.0
+      account-financial-tools: https://github.com/efatto/account-financial-tools.git 11.0
       account-fiscal-rule: https://github.com/OCA/account-fiscal-rule.git 11.0
       account-invoice-reporting: https://github.com/OCA/account-invoice-reporting.git 11.0
       account-invoicing: https://github.com/OCA/account-invoicing.git 11.0
@@ -417,7 +417,7 @@ repositories:
       interface-github: https://github.com/OCA/interface-github.git 10.0
       intrastat-extrastat: https://github.com/efatto/intrastat-extrastat.git 10.0
       knowledge: https://github.com/OCA/knowledge.git 10.0
-      management-system: https://github.com/efatto/management-system.git 10.0_mig
+      management-system: https://github.com/efatto/management-system.git 10.0
       manufacture: https://github.com/OCA/manufacture.git 10.0
       mis-builder: https://github.com/OCA/mis-builder.git 10.0
       multi-company: https://github.com/OCA/multi-company.git 10.0
@@ -488,8 +488,8 @@ repositories:
       web: https://github.com/OCA/web.git 9.0
   - version: '8.0'
     remotes:
-      l10n-italy: https://github.com/efatto/l10n-italy.git 8.0_mig
-      account-analytic: https://github.com/efatto/account-analytic.git 8.0_mig_stock_analytic
+      l10n-italy: https://github.com/efatto/l10n-italy.git 8.0
+      account-analytic: https://github.com/efatto/account-analytic.git 8.0
       account-closing: https://github.com/OCA/account-closing.git 8.0
       account-financial-reporting: https://github.com/OCA/account-financial-reporting.git 8.0
       account-financial-tools: https://github.com/OCA/account-financial-tools.git 8.0
@@ -538,7 +538,7 @@ repositories:
       website: https://github.com/OCA/website.git 8.0
   - version: '7.0'
     remotes:
-      l10n-italy: https://github.com/OmniaSolutions/l10n-italy.git 7.0_fattura_pa_backport
+      l10n-italy: https://github.com/OmniaSolutions/l10n-italy.git 7.0
       account-financial-reporting: https://github.com/OCA/account-financial-reporting.git 7.0
       account-invoicing: https://github.com/OCA/account-invoicing.git 7.0
       account-payment: https://github.com/OCA/account-payment.git 7.0
