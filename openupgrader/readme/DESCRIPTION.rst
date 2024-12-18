@@ -1,1 +1,1 @@
-This module add ability to migrate Odoo from one version to another.
+This module add the ability to migrate Odoo from one version to another.
